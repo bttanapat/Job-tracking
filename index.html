@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workload Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --n0:#07131F;--n1:#0B1B2E;--n2:#0F2035;--n3:#122540;--n4:#1A3050;
+  --n5:#223A56;--s1:#2A4A6B;--sl:#4A6E8E;--ms:#8AAEC8;
+  --tb:#E8F2FA;--tm:#C4D8E8;--tmu:#7A9AB8;--td:#3A5A78;
+  --bd:#1A3350;--bd2:#2A4E70;
+  --ac:#1D6FA5;--ac2:#2585C0;--ac3:#1259882;
+  --done-bg:#0A1A10;--done-c:#7EC450;--done-bd:#1A4020;
+  --red-bg:#1E0A0A;--red-c:#F08080;--red-bd:#4A1A1A;
+  --yellow-bg:#1E1608;--yellow-c:#E0A840;--yellow-bd:#4A3610;
+  --purple-bg:#16142A;--purple-c:#A8A0EC;--purple-bd:#2A2860;
+}
+html{background:var(--n0)}
+body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--n0);color:var(--tm);min-height:100vh}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--n1)}
+::-webkit-scrollbar-thumb{background:var(--n5);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--sl)}
+
+/* LAYOUT */
+.app{max-width:1280px;margin:0 auto;padding:24px 20px}
+
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:20px;border-bottom:0.5px solid var(--bd)}
+.header-left{display:flex;align-items:center;gap:14px}
+.logo{width:38px;height:38px;background:var(--n4);border:0.5px solid var(--bd2);border-radius:10px;display:flex;align-items:center;justify-content:center}
+.logo i{font-size:20px;color:var(--ms)}
+.header-title h1{font-size:18px;font-weight:600;color:var(--tb);letter-spacing:-0.3px}
+.header-title p{font-size:12px;color:var(--tmu);margin-top:1px;font-family:'IBM Plex Mono',monospace}
+.header-right{display:flex;align-items:center;gap:8px}
+.date-badge{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tmu);background:var(--n3);border:0.5px solid var(--bd);border-radius:6px;padding:5px 10px}
+
+/* SUMMARY */
+.summary{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.sc{background:var(--n2);border:0.5px solid var(--bd);border-radius:12px;padding:12px 16px;min-width:90px;position:relative;overflow:hidden;transition:border-color 0.2s}
+.sc:hover{border-color:var(--bd2)}
+.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--sc-accent,var(--ac))}
+.sc b{display:block;font-size:24px;font-weight:600;color:var(--tb);line-height:1.1;font-family:'IBM Plex Mono',monospace}
+.sc span{font-size:11px;color:var(--tmu)}
+.sc.c-all{--sc-accent:#3A5E82}
+.sc.c-inp{--sc-accent:#7A70EC}
+.sc.c-done{--sc-accent:#5CAA30}
+.sc.c-crit{--sc-accent:#E05050}
+.sc.c-blk{--sc-accent:#E08030}
+
+/* TOOLBAR */
+.toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.search-wrap{position:relative;flex:1;min-width:140px}
+.search-wrap i{position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--td);pointer-events:none}
+.search-wrap input{width:100%;padding:7px 10px 7px 30px;font-size:13px;background:var(--n2);border:0.5px solid var(--bd);border-radius:8px;color:var(--tm);font-family:'IBM Plex Sans Thai',sans-serif;outline:none;transition:border-color 0.2s}
+.search-wrap input::placeholder{color:var(--td)}
+.search-wrap input:focus{border-color:var(--ac)}
+select.filter{font-size:12px;padding:7px 10px;border:0.5px solid var(--bd);border-radius:8px;background:var(--n2);color:var(--tm);height:34px;outline:none;font-family:'IBM Plex Sans Thai',sans-serif;cursor:pointer;transition:border-color 0.2s}
+select.filter:focus{border-color:var(--ac)}
+select.filter option{background:var(--n2)}
+.btn{font-size:12px;padding:7px 14px;border:0.5px solid var(--bd);border-radius:8px;background:var(--n2);color:var(--tm);cursor:pointer;height:34px;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Sans Thai',sans-serif;transition:all 0.15s}
+.btn:hover{background:var(--n4);border-color:var(--sl)}
+.btn.primary{background:var(--ac);color:#F0F8FF;border-color:var(--ac2);font-weight:500}
+.btn.primary:hover{background:var(--ac2)}
+.btn.sm{height:28px;font-size:11px;padding:4px 10px}
+
+/* TABLE */
+.tbl-wrap{border:0.5px solid var(--bd);border-radius:14px;overflow:hidden;background:var(--n1)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 13px;font-size:11px;font-weight:500;color:var(--tmu);background:var(--n3);border-bottom:0.5px solid var(--bd);letter-spacing:0.4px;text-transform:uppercase}
+td{padding:10px 13px;border-bottom:0.5px solid var(--bd);color:var(--tm);vertical-align:middle}
+tr.pr:last-child td,tr.sr:last-child td{border-bottom:none}
+tr.pr:hover td{background:rgba(255,255,255,0.02)}
+tr.sr td{background:#080F18;border-bottom:0.5px solid #0F1E2E}
+tr.sr:hover td{background:#0A1520}
+tr.sr.wf-row td{background:#060D15;border-bottom:0.5px solid #0C1A28}
+tr.sr.wf-row:hover td{background:#081018}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:500;white-space:nowrap;font-family:'IBM Plex Mono',monospace}
+.p-critical{background:var(--red-bg);color:var(--red-c);border:0.5px solid var(--red-bd)}
+.p-high{background:var(--yellow-bg);color:var(--yellow-c);border:0.5px solid var(--yellow-bd)}
+.p-medium{background:#0C1C30;color:#85B7EB;border:0.5px solid #1A3E5E}
+.p-low{background:var(--done-bg);color:var(--done-c);border:0.5px solid var(--done-bd)}
+.s-todo{background:#111E2C;color:#7AAECF;border:0.5px solid var(--bd2)}
+.s-inprogress{background:var(--purple-bg);color:var(--purple-c);border:0.5px solid var(--purple-bd)}
+.s-review{background:var(--yellow-bg);color:var(--yellow-c);border:0.5px solid var(--yellow-bd)}
+.s-done{background:var(--done-bg);color:var(--done-c);border:0.5px solid var(--done-bd)}
+.s-blocked{background:var(--red-bg);color:var(--red-c);border:0.5px solid var(--red-bd)}
+.j-technical{background:#0A1620;color:#6AAEDD;border:0.5px solid #1A3A55}
+.j-spare{background:#14102A;color:#A8A0EC;border:0.5px solid #2A2660}
+.j-order{background:#0A1E18;color:#50C4A0;border:0.5px solid #184A38}
+.j-supplier{background:#0A1E1A;color:#45C0A5;border:0.5px solid #154038}
+.j-other{background:#161410;color:#A0A09A;border:0.5px solid #302E2A}
+
+/* PROGRESS */
+.prog-wrap{display:flex;align-items:center;gap:8px}
+.prog-bar{flex:1;height:4px;background:#0E1E30;border-radius:2px;overflow:hidden;min-width:40px}
+.prog-fill{height:100%;border-radius:2px;background:var(--ac);transition:width 0.4s ease}
+.prog-fill.all-done{background:var(--done-c)}
+.prog-text{font-size:11px;color:var(--tmu);white-space:nowrap;font-family:'IBM Plex Mono',monospace;min-width:50px}
+
+/* EXPAND BTN */
+.xbtn{background:none;border:none;cursor:pointer;color:var(--td);padding:2px 4px;border-radius:4px;font-size:14px;display:inline-flex;align-items:center;transition:transform 0.2s,color 0.15s;vertical-align:middle}
+.xbtn:hover{color:var(--ms)}
+.xbtn.open{transform:rotate(90deg)}
+.ico{background:none;border:none;cursor:pointer;color:var(--td);padding:3px 5px;border-radius:5px;font-size:14px;display:inline-flex;align-items:center;transition:all 0.15s}
+.ico:hover{color:var(--tm);background:var(--n4)}
+.ico.del:hover{color:var(--red-c);background:var(--red-bg)}
+
+/* WF STEP ROW */
+.wf-step{display:flex;align-items:flex-start;gap:9px}
+.wf-num{width:22px;height:22px;border-radius:50%;border:0.5px solid var(--bd2);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--tmu);flex-shrink:0;margin-top:1px;font-family:'IBM Plex Mono',monospace}
+.wf-num.done{background:var(--done-bg);border-color:var(--done-bd);color:var(--done-c)}
+.wf-name{font-size:12px;color:var(--tm)}
+.wf-name.done{text-decoration:line-through;color:var(--td)}
+.wf-note{font-size:11px;color:var(--tmu);margin-top:3px;padding-left:2px}
+
+/* EMPTY */
+.empty{text-align:center;padding:3rem;color:var(--td)}
+.empty i{font-size:36px;display:block;margin:0 auto 10px;color:var(--n5)}
+.empty p{font-size:13px}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(4px)}
+.modal{background:var(--n2);border:0.5px solid var(--bd2);border-radius:16px;padding:1.5rem;width:min(520px,96vw);max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.6)}
+.modal h2{font-size:15px;font-weight:600;margin-bottom:14px;color:var(--tb);display:flex;align-items:center;gap:8px}
+.modal h2 i{font-size:17px;color:var(--ms)}
+.sec-title{font-size:11px;font-weight:500;color:var(--tmu);border-top:0.5px solid var(--bd);padding-top:12px;margin:12px 0 9px;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:0.5px}
+.fr{margin-bottom:10px}
+.fr label{display:block;font-size:11px;color:var(--tmu);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.4px}
+.fr input,.fr select,.fr textarea{width:100%;font-size:13px;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:8px;background:var(--n0);color:var(--tm);outline:none;font-family:'IBM Plex Sans Thai',sans-serif;transition:border-color 0.2s}
+.fr input:focus,.fr select:focus,.fr textarea:focus{border-color:var(--ac)}
+.fr select option{background:var(--n0)}
+.fr textarea{resize:vertical;min-height:52px}
+.fr input[type=date]{color-scheme:dark;font-family:'IBM Plex Mono',monospace}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;padding-top:14px;border-top:0.5px solid var(--bd)}
+.tpl-banner{background:linear-gradient(135deg,#0E2040,#162A50);border:0.5px solid var(--bd2);border-radius:10px;padding:11px 13px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tpl-banner p{font-size:12px;color:var(--tm);flex:1}
+.tpl-banner strong{color:var(--tb)}
+.step-item{background:var(--n0);border:0.5px solid var(--bd);border-radius:9px;padding:10px 11px;margin-bottom:7px;transition:border-color 0.15s}
+.step-item:hover{border-color:var(--bd2)}
+.step-row{display:flex;align-items:center;gap:8px}
+.step-row input[type=checkbox]{accent-color:var(--ac);width:15px;height:15px;flex-shrink:0;cursor:pointer}
+.step-name-text{font-size:12px;color:var(--tm);flex:1}
+.note-input{width:100%;font-size:11px;padding:6px 9px;border:0.5px solid var(--bd);border-radius:6px;background:var(--n2);color:var(--tmu);outline:none;margin-top:7px;font-family:'IBM Plex Sans Thai',sans-serif;transition:border-color 0.2s}
+.note-input:focus{border-color:var(--ac)}
+.note-input::placeholder{color:var(--td)}
+.add-row{display:flex;gap:7px;align-items:center;margin-top:6px}
+.add-row input{flex:1;font-size:12px;padding:7px 10px;border:0.5px solid var(--bd2);border-radius:8px;background:var(--n0);color:var(--tm);outline:none;font-family:'IBM Plex Sans Thai',sans-serif;transition:border-color 0.2s}
+.add-row input:focus{border-color:var(--ac)}
+
+/* STATUS SELECT IN TABLE */
+.status-sel{border:none!important;cursor:pointer;font-size:11px;font-weight:500;padding:3px 5px!important;color:inherit;background:transparent!important;font-family:'IBM Plex Mono',monospace}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--n4);border:0.5px solid var(--bd2);border-radius:10px;padding:10px 16px;font-size:13px;color:var(--tb);z-index:2000;box-shadow:0 8px 32px rgba(0,0,0,0.5);transform:translateY(20px);opacity:0;transition:all 0.3s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+
+@media(max-width:700px){
+  .summary{gap:7px}
+  .sc{min-width:70px;padding:10px 12px}
+  .sc b{font-size:20px}
+  .fg2{grid-template-columns:1fr}
+  th,td{padding:8px 9px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-left">
+      <div class="logo"><i class="ti ti-layout-list"></i></div>
+      <div class="header-title">
+        <h1>Workload Tracker</h1>
+        <p id="date-str"></p>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn" onclick="exportJSON()" title="Export JSON"><i class="ti ti-download"></i> Export</button>
+      <button class="btn" onclick="document.getElementById('imp').click()" title="Import JSON"><i class="ti ti-upload"></i> Import</button>
+      <input type="file" id="imp" accept=".json" style="display:none" onchange="importJSON(event)">
+    </div>
+  </div>
+
+  <div class="summary" id="summary"></div>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <i class="ti ti-search"></i>
+      <input type="text" id="fQ" placeholder="ค้นหา task..." oninput="render()">
+    </div>
+    <select class="filter" id="fJ" onchange="render()">
+      <option value="">Job type ทั้งหมด</option>
+      <option>Technical</option><option>Spare Part</option><option>Order Spare Part</option>
+      <option>Follow Supplier</option><option>Other</option>
+    </select>
+    <select class="filter" id="fP" onchange="render()">
+      <option value="">Priority ทั้งหมด</option>
+      <option>Critical</option><option>High</option><option>Medium</option><option>Low</option>
+    </select>
+    <select class="filter" id="fS" onchange="render()">
+      <option value="">Status ทั้งหมด</option>
+      <option>To Do</option><option>In Progress</option><option>Review</option><option>Done</option><option>Blocked</option>
+    </select>
+    <button class="btn primary" onclick="openModal()"><i class="ti ti-plus"></i> เพิ่ม Task</button>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <colgroup>
+        <col style="width:21%"><col style="width:13%"><col style="width:10%"><col style="width:11%"><col style="width:17%"><col style="width:15%"><col style="width:10%"><col style="width:3%">
+      </colgroup>
+      <thead>
+        <tr><th>Task</th><th>Job type</th><th>Priority</th><th>Status</th><th>Detail</th><th>Progress</th><th>Due date</th><th></th></tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modalBg" style="display:none" onclick="bgClose(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2 id="modal-title"><i class="ti ti-plus"></i> เพิ่ม Task ใหม่</h2>
+    <div class="fr"><label>ชื่องาน *</label><input id="fn" placeholder="ชื่อ task..."></div>
+    <div class="fg2">
+      <div class="fr"><label>Job type</label>
+        <select id="fjt" onchange="onJTChange(this.value)">
+          <option>Technical</option><option>Spare Part</option><option>Order Spare Part</option>
+          <option>Follow Supplier</option><option>Other</option>
+        </select>
+      </div>
+      <div class="fr"><label>Priority</label>
+        <select id="fp"><option>Critical</option><option>High</option><option selected>Medium</option><option>Low</option></select>
+      </div>
+      <div class="fr"><label>Status</label>
+        <select id="fs"><option>To Do</option><option>In Progress</option><option>Review</option><option>Done</option><option>Blocked</option></select>
+      </div>
+      <div class="fr"><label>Due date</label><input type="date" id="fd"></div>
+    </div>
+    <div class="fr"><label>Detail / หมายเหตุ</label><textarea id="fdt" placeholder="รายละเอียดงาน..."></textarea></div>
+    <div id="step-section"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()"><i class="ti ti-x"></i> ยกเลิก</button>
+      <button class="btn primary" onclick="saveTask()"><i class="ti ti-check"></i> บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const TEMPLATES={
+  'Spare Part':[
+    {name:'Create document',note:'',done:false},
+    {name:'Request procurement for send to repair',note:'',done:false},
+    {name:'Waiting and confirm the quotation',note:'',done:false},
+    {name:'Testing before accept job',note:'',done:false}
+  ],
+  'Order Spare Part':[
+    {name:'Create purchase request (PR)',note:'',done:false},
+    {name:'Request procurement / sourcing',note:'',done:false},
+    {name:'Waiting and confirm the quotation',note:'',done:false},
+    {name:'Approve purchase order (PO)',note:'',done:false},
+    {name:'Follow up delivery',note:'',done:false},
+    {name:'Receive and inspect goods',note:'',done:false}
+  ]
+};
+const jBadge={Technical:'j-technical','Spare Part':'j-spare','Order Spare Part':'j-order','Follow Supplier':'j-supplier',Other:'j-other'};
+const pBadge={Critical:'p-critical',High:'p-high',Medium:'p-medium',Low:'p-low'};
+const sBadge={'To Do':'s-todo','In Progress':'s-inprogress',Review:'s-review',Done:'s-done',Blocked:'s-blocked'};
+
+let tasks=[],expanded={},editId=null,mSteps=[],mSubs=[],mJT='Technical';
+
+function load(){try{const d=localStorage.getItem('wl_v4');if(d)tasks=JSON.parse(d)}catch(e){tasks=[]}}
+function save(){try{localStorage.setItem('wl_v4',JSON.stringify(tasks))}catch(e){}}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function isWF(jt){return jt==='Spare Part'||jt==='Order Spare Part'}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+function setDate(){
+  const d=new Date();
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('date-str').textContent=`${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function calcProg(t){
+  if(isWF(t.jobtype)){if(!t.steps||!t.steps.length)return null;return{done:t.steps.filter(s=>s.done).length,total:t.steps.length}}
+  if(!t.subs||!t.subs.length)return null;
+  return{done:t.subs.filter(s=>s.done).length,total:t.subs.length};
+}
+
+function progHTML(t){
+  const p=calcProg(t);
+  if(!p)return'<span style="color:var(--td);font-size:11px;font-family:\'IBM Plex Mono\',monospace">—</span>';
+  const pct=Math.round(p.done/p.total*100);
+  const cls=p.done===p.total?'prog-fill all-done':'prog-fill';
+  const lbl=isWF(t.jobtype)?`${p.done}/${p.total} steps`:`${p.done}/${p.total} done`;
+  return`<div class="prog-wrap"><div class="prog-bar"><div class="${cls}" style="width:${pct}%"></div></div><span class="prog-text">${lbl}</span></div>`;
+}
+
+function render(){
+  const q=document.getElementById('fQ').value.toLowerCase();
+  const fj=document.getElementById('fJ').value;
+  const fp=document.getElementById('fP').value;
+  const fs=document.getElementById('fS').value;
+  const fil=tasks.filter(t=>{
+    if(fj&&t.jobtype!==fj)return false;
+    if(fp&&t.priority!==fp)return false;
+    if(fs&&t.status!==fs)return false;
+    if(q&&!(t.name.toLowerCase().includes(q)||(t.detail||'').toLowerCase().includes(q)))return false;
+    return true;
+  });
+  const tbody=document.getElementById('tbody');
+  if(!fil.length){
+    tbody.innerHTML='<tr><td colspan="8" class="empty"><i class="ti ti-inbox"></i><p>ยังไม่มี task — กด "+ เพิ่ม Task" เพื่อเริ่ม</p></td></tr>';
+  }else{
+    let h='';
+    fil.forEach(t=>{
+      const wf=isWF(t.jobtype);
+      const items=wf?t.steps||[]:t.subs||[];
+      const isOpen=expanded[t.id];
+      h+=`<tr class="pr">
+        <td>
+          ${items.length?`<button class="xbtn${isOpen?' open':''}" onclick="toggleExp('${t.id}')"><i class="ti ti-chevron-right"></i></button>`:'<span style="display:inline-block;width:22px"></span>'}
+          ${esc(t.name)}
+        </td>
+        <td><span class="badge ${jBadge[t.jobtype]||'j-other'}">${esc(t.jobtype)}</span></td>
+        <td><span class="badge ${pBadge[t.priority]}">${t.priority}</span></td>
+        <td>
+          <select class="badge ${sBadge[t.status]} status-sel" onchange="chgStatus('${t.id}',this.value)">
+            ${['To Do','In Progress','Review','Done','Blocked'].map(s=>`<option${t.status===s?' selected':''}>${s}</option>`).join('')}
+          </select>
+        </td>
+        <td style="font-size:12px;color:var(--tmu)">${esc(t.detail)||'—'}</td>
+        <td>${progHTML(t)}</td>
+        <td style="font-size:11px;color:var(--tmu);font-family:'IBM Plex Mono',monospace">${t.due||'—'}</td>
+        <td style="white-space:nowrap">
+          <button class="ico" onclick="openModal('${t.id}')" title="แก้ไข"><i class="ti ti-edit"></i></button>
+          <button class="ico del" onclick="delTask('${t.id}')" title="ลบ"><i class="ti ti-trash"></i></button>
+        </td>
+      </tr>`;
+      if(items.length&&isOpen){
+        if(wf){
+          (t.steps||[]).forEach((s,si)=>{
+            h+=`<tr class="sr wf-row">
+              <td colspan="4" style="padding-left:32px">
+                <div class="wf-step">
+                  <div class="wf-num${s.done?' done':''}">${si+1}</div>
+                  <div>
+                    <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer">
+                      <input type="checkbox" ${s.done?'checked':''} onchange="toggleStep('${t.id}',${si})" style="accent-color:var(--ac);width:14px;height:14px">
+                      <span class="wf-name${s.done?' done':''}">${esc(s.name)}</span>
+                    </label>
+                    ${s.note?`<div class="wf-note">${esc(s.note)}</div>`:''}
+                  </div>
+                </div>
+              </td>
+              <td colspan="3" style="font-size:11px;color:var(--tmu)">${s.note?esc(s.note):'—'}</td>
+              <td></td>
+            </tr>`;
+          });
+        }else{
+          (t.subs||[]).forEach((s,si)=>{
+            h+=`<tr class="sr">
+              <td colspan="4" style="padding-left:32px;color:var(--tmu)">
+                <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:12px">
+                  <input type="checkbox" ${s.done?'checked':''} onchange="toggleSub('${t.id}',${si})" style="accent-color:var(--ac);width:14px;height:14px">
+                  <span${s.done?' style="text-decoration:line-through;color:var(--td)"':''}>${esc(s.name)}</span>
+                </label>
+              </td>
+              <td colspan="3" style="font-size:11px;color:var(--tmu)">${esc(s.note)||'—'}</td>
+              <td><button class="ico del" onclick="delSub('${t.id}',${si})"><i class="ti ti-x"></i></button></td>
+            </tr>`;
+          });
+        }
+      }
+    });
+    tbody.innerHTML=h;
+  }
+  renderSum();
+}
+
+function renderSum(){
+  const tot=tasks.length,done=tasks.filter(t=>t.status==='Done').length;
+  const blk=tasks.filter(t=>t.status==='Blocked').length,crit=tasks.filter(t=>t.priority==='Critical').length;
+  const inp=tasks.filter(t=>t.status==='In Progress').length;
+  document.getElementById('summary').innerHTML=`
+    <div class="sc c-all"><b>${tot}</b><span>ทั้งหมด</span></div>
+    <div class="sc c-inp"><b>${inp}</b><span>In Progress</span></div>
+    <div class="sc c-done"><b>${done}</b><span>Done</span></div>
+    <div class="sc c-crit"><b>${crit}</b><span>Critical</span></div>
+    <div class="sc c-blk"><b>${blk}</b><span>Blocked</span></div>`;
+}
+
+function toggleExp(id){expanded[id]=!expanded[id];render()}
+
+/* MODAL */
+function renderStepSection(){
+  const wf=isWF(mJT);
+  const tpl=TEMPLATES[mJT];
+  let html='';
+  if(wf&&!editId&&tpl){
+    html+=`<div class="tpl-banner">
+      <i class="ti ti-template" style="font-size:18px;color:var(--ms);flex-shrink:0"></i>
+      <p>มี <strong>Workflow template</strong> สำหรับ ${mJT}</p>
+      <button class="btn sm primary" onclick="applyTpl()"><i class="ti ti-check"></i> ใช้ template</button>
+      <button class="btn sm" onclick="clearSteps()">ไม่ใช้</button>
+    </div>`;
+  }
+  if(wf){
+    const list=mSteps.map((s,i)=>`
+      <div class="step-item">
+        <div class="step-row">
+          <input type="checkbox" ${s.done?'checked':''} onchange="mToggleStep(${i})">
+          <span class="step-name-text">${esc(s.name)}</span>
+          <button class="ico del" onclick="mDelStep(${i})"><i class="ti ti-x"></i></button>
+        </div>
+        <input class="note-input" placeholder="หมายเหตุ..." value="${esc(s.note)}" oninput="mSteps[${i}].note=this.value">
+      </div>`).join('');
+    html+=`<div class="sec-title"><i class="ti ti-flag" style="font-size:13px"></i>Workflow Milestones <span style="color:var(--td);text-transform:none;font-weight:400">(${mSteps.length} steps)</span></div>
+      <div id="item-list">${list||'<p style="font-size:11px;color:var(--td);padding:4px 0">ยังไม่มี step</p>'}</div>
+      <div class="add-row">
+        <input id="ns" placeholder="ชื่อ step ใหม่..." onkeydown="if(event.key==='Enter')addStep()">
+        <button class="btn sm primary" onclick="addStep()"><i class="ti ti-plus"></i> เพิ่ม step</button>
+      </div>`;
+  }else{
+    const list=mSubs.map((s,i)=>`
+      <div class="step-item">
+        <div class="step-row">
+          <input type="checkbox" ${s.done?'checked':''} onchange="mToggleSub(${i})">
+          <span class="step-name-text">${esc(s.name)}</span>
+          <button class="ico del" onclick="mDelSub(${i})"><i class="ti ti-x"></i></button>
+        </div>
+        <input class="note-input" placeholder="หมายเหตุ..." value="${esc(s.note||'')}" oninput="mSubs[${i}].note=this.value">
+      </div>`).join('');
+    html+=`<div class="sec-title"><i class="ti ti-subtask" style="font-size:13px"></i>Sub-tasks <span style="color:var(--td);text-transform:none;font-weight:400">(${mSubs.length})</span></div>
+      <div id="item-list">${list||'<p style="font-size:11px;color:var(--td);padding:4px 0">ยังไม่มี sub-task</p>'}</div>
+      <div class="add-row">
+        <input id="ns" placeholder="ชื่อ sub-task ใหม่..." onkeydown="if(event.key==='Enter')addSub()">
+        <button class="btn sm primary" onclick="addSub()"><i class="ti ti-plus"></i> เพิ่ม</button>
+      </div>`;
+  }
+  document.getElementById('step-section').innerHTML=html;
+}
+
+function refreshList(){
+  const wf=isWF(mJT);
+  const items=wf?mSteps:mSubs;
+  const el=document.getElementById('item-list');
+  if(!el)return;
+  if(!items.length){el.innerHTML=`<p style="font-size:11px;color:var(--td);padding:4px 0">ยังไม่มี ${wf?'step':'sub-task'}</p>`;return}
+  el.innerHTML=items.map((s,i)=>`
+    <div class="step-item">
+      <div class="step-row">
+        <input type="checkbox" ${s.done?'checked':''} onchange="${wf?'mToggleStep':'mToggleSub'}(${i})">
+        <span class="step-name-text">${esc(s.name)}</span>
+        <button class="ico del" onclick="${wf?'mDelStep':'mDelSub'}(${i})"><i class="ti ti-x"></i></button>
+      </div>
+      <input class="note-input" placeholder="หมายเหตุ..." value="${esc(s.note||'')}" oninput="${wf?'mSteps':'mSubs'}[${i}].note=this.value">
+    </div>`).join('');
+}
+
+function onJTChange(v){
+  const wasWF=isWF(mJT);const nowWF=isWF(v);
+  mJT=v;
+  if(wasWF!==nowWF){mSteps=[];mSubs=[]}
+  renderStepSection();
+}
+
+function applyTpl(){mSteps=TEMPLATES[mJT].map(s=>({...s,done:false}));renderStepSection()}
+function clearSteps(){mSteps=[];renderStepSection()}
+function mToggleStep(i){mSteps[i].done=!mSteps[i].done;refreshList()}
+function mDelStep(i){mSteps.splice(i,1);refreshList()}
+function mToggleSub(i){mSubs[i].done=!mSubs[i].done;refreshList()}
+function mDelSub(i){mSubs.splice(i,1);refreshList()}
+function addStep(){const el=document.getElementById('ns');const n=(el?el.value:'').trim();if(!n)return;mSteps.push({name:n,note:'',done:false});el.value='';refreshList()}
+function addSub(){const el=document.getElementById('ns');const n=(el?el.value:'').trim();if(!n)return;mSubs.push({name:n,note:'',done:false});el.value='';refreshList()}
+
+function openModal(id){
+  editId=id||null;
+  const t=id?tasks.find(x=>x.id===id):null;
+  mJT=t?t.jobtype:'Technical';
+  mSteps=t&&t.steps?JSON.parse(JSON.stringify(t.steps)):[];
+  mSubs=t&&t.subs?JSON.parse(JSON.stringify(t.subs)):[];
+  document.getElementById('modal-title').innerHTML=`<i class="ti ti-${id?'edit':'plus'}"></i> ${id?'แก้ไข Task':'เพิ่ม Task ใหม่'}`;
+  document.getElementById('fn').value=t?t.name:'';
+  document.getElementById('fjt').value=mJT;
+  document.getElementById('fp').value=t?t.priority:'Medium';
+  document.getElementById('fs').value=t?t.status:'To Do';
+  document.getElementById('fd').value=t?t.due:'';
+  document.getElementById('fdt').value=t?t.detail:'';
+  renderStepSection();
+  document.getElementById('modalBg').style.display='flex';
+  setTimeout(()=>{const el=document.getElementById('fn');if(el){el.focus();el.setSelectionRange(999,999)}},60);
+}
+
+function closeModal(){document.getElementById('modalBg').style.display='none';editId=null;mSteps=[];mSubs=[];mJT='Technical'}
+function bgClose(e){if(e.target===document.getElementById('modalBg'))closeModal()}
+
+function saveTask(){
+  const name=(document.getElementById('fn').value||'').trim();
+  if(!name){document.getElementById('fn').focus();return}
+  const wf=isWF(mJT);
+  const obj={
+    id:editId||Date.now().toString(36)+Math.random().toString(36).slice(2),
+    name,jobtype:mJT,
+    priority:document.getElementById('fp').value,
+    status:document.getElementById('fs').value,
+    detail:(document.getElementById('fdt').value||'').trim(),
+    due:document.getElementById('fd').value,
+    steps:wf?JSON.parse(JSON.stringify(mSteps)):[],
+    subs:!wf?JSON.parse(JSON.stringify(mSubs)):[]
+  };
+  if(editId){tasks=tasks.map(t=>t.id===editId?obj:t)}else{tasks.push(obj)}
+  save();closeModal();render();showToast(editId?'✓ อัปเดต task แล้ว':'✓ เพิ่ม task ใหม่แล้ว');
+}
+
+function chgStatus(id,val){tasks=tasks.map(t=>t.id===id?{...t,status:val}:t);save();render();showToast('✓ อัปเดต status แล้ว')}
+
+function toggleStep(tid,si){
+  tasks=tasks.map(t=>{if(t.id!==tid)return t;const steps=[...t.steps];steps[si]={...steps[si],done:!steps[si].done};return{...t,steps}});
+  save();render();
+}
+function toggleSub(tid,si){
+  tasks=tasks.map(t=>{if(t.id!==tid)return t;const subs=[...t.subs];subs[si]={...subs[si],done:!subs[si].done};return{...t,subs}});
+  save();render();
+}
+function delSub(tid,si){
+  tasks=tasks.map(t=>t.id!==tid?t:{...t,subs:t.subs.filter((_,i)=>i!==si)});
+  save();render();
+}
+function delTask(id){
+  if(confirm('ลบ task นี้?')){tasks=tasks.filter(t=>t.id!==id);delete expanded[id];save();render();showToast('🗑 ลบ task แล้ว')}
+}
+
+function exportJSON(){
+  const blob=new Blob([JSON.stringify(tasks,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`workload-${new Date().toISOString().slice(0,10)}.json`;a.click();
+  showToast('✓ Export สำเร็จ');
+}
+
+function importJSON(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(Array.isArray(data)){tasks=data;save();render();showToast(`✓ Import ${data.length} tasks สำเร็จ`)}
+      else{alert('ไฟล์ไม่ถูกต้องครับ')}
+    }catch(err){alert('อ่านไฟล์ไม่ได้ครับ: '+err.message)}
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
+
+// INIT
+load();setDate();render();
+</script>
+</body>
+</html>
