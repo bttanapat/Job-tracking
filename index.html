@@ -7,84 +7,198 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+
+<!-- ============================================================
+  STEP 1: วาง Firebase config ของคุณตรงนี้
+  (ได้จาก Firebase Console → Project Settings → Your apps)
+  ============================================================ -->
+<script>
+  const FIREBASE_CONFIG = {
+    apiKey:            "// Import the functions you need from the SDKs you need
+ 
+import { initializeApp } from "firebase/app";
+ 
+import { getAnalytics } from "firebase/analytics";
+ 
+// TODO: Add SDKs for Firebase products that you want to use
+ 
+// https://firebase.google.com/docs/web/setup#available-libraries
+ 
+ 
+// Your web app's Firebase configuration
+ 
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+ 
+const firebaseConfig = {
+ 
+  apiKey: "AIzaSyBZEPz3wsW61PpGSQgMrPUEUudDZ9OWBU8",
+ 
+  authDomain: "job-tracking-bt.firebaseapp.com",
+ 
+  projectId: "job-tracking-bt",
+ 
+  storageBucket: "job-tracking-bt.firebasestorage.app",
+ 
+  messagingSenderId: "177697484539",
+ 
+  appId: "1:177697484539:web:2d1f2a4e7d8d9275d0ca5e",
+ 
+  measurementId: "G-XBJX6NHX8R"
+ 
+};
+ 
+ 
+// Initialize Firebase
+ 
+const app = initializeApp(firebaseConfig);
+ 
+const analytics = getAnalytics(app);",
+    authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId:         "YOUR_PROJECT_ID",
+    storageBucket:     "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId:             "YOUR_APP_ID"
+  };
+</script>
+
+<!-- Firebase SDKs -->
+<script type="module">
+import { initializeApp }                          from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+                                                  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, where }
+                                                  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+/* ── init ── */
+const app  = initializeApp(FIREBASE_CONFIG);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+/* ── expose to global scope (used by onclick handlers) ── */
+window._fb = { auth, db, provider, signInWithPopup, signOut,
+               collection, doc, setDoc, deleteDoc, query, where };
+
+/* ── auth state listener ── */
+let unsubTasks = null;
+onAuthStateChanged(auth, user => {
+  if (user) {
+    showApp(user);
+    listenTasks(user.uid);
+  } else {
+    if (unsubTasks) { unsubTasks(); unsubTasks = null; }
+    showLogin();
+  }
+});
+
+function listenTasks(uid) {
+  if (unsubTasks) unsubTasks();
+  const q = query(collection(db, "tasks"), where("uid", "==", uid));
+  unsubTasks = onSnapshot(q, snap => {
+    window._tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    render();
+  });
+}
+
+/* ── CRUD ── */
+window.saveTaskToDb = async (obj) => {
+  const user = auth.currentUser;
+  if (!user) return;
+  obj.uid = user.uid;
+  await setDoc(doc(db, "tasks", obj.id), obj);
+};
+window.deleteTaskFromDb = async (id) => {
+  await deleteDoc(doc(db, "tasks", id));
+};
+
+/* ── sign in / out ── */
+window.doSignIn = () =>
+  signInWithPopup(auth, provider).catch(e => alert("Login ไม่สำเร็จ: " + e.message));
+window.doSignOut = () => signOut(auth);
+</script>
+
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --n0:#07131F;--n1:#0B1B2E;--n2:#0F2035;--n3:#122540;--n4:#1A3050;
-  --n5:#223A56;--s1:#2A4A6B;--sl:#4A6E8E;--ms:#8AAEC8;
+  --n0:#07131F;--n1:#0B1B2E;--n2:#0F2035;--n3:#122540;--n4:#1A3050;--n5:#223A56;
+  --sl:#4A6E8E;--ms:#8AAEC8;
   --tb:#E8F2FA;--tm:#C4D8E8;--tmu:#7A9AB8;--td:#3A5A78;
   --bd:#1A3350;--bd2:#2A4E70;
-  --ac:#1D6FA5;--ac2:#2585C0;--ac3:#1259882;
+  --ac:#1D6FA5;--ac2:#2585C0;
   --done-bg:#0A1A10;--done-c:#7EC450;--done-bd:#1A4020;
   --red-bg:#1E0A0A;--red-c:#F08080;--red-bd:#4A1A1A;
   --yellow-bg:#1E1608;--yellow-c:#E0A840;--yellow-bd:#4A3610;
   --purple-bg:#16142A;--purple-c:#A8A0EC;--purple-bd:#2A2860;
 }
-html{background:var(--n0)}
-body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--n0);color:var(--tm);min-height:100vh}
-
-/* SCROLLBAR */
-::-webkit-scrollbar{width:6px;height:6px}
+html,body{background:var(--n0);font-family:'IBM Plex Sans Thai',sans-serif;color:var(--tm);min-height:100vh}
+::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:var(--n1)}
-::-webkit-scrollbar-thumb{background:var(--n5);border-radius:3px}
-::-webkit-scrollbar-thumb:hover{background:var(--sl)}
+::-webkit-scrollbar-thumb{background:var(--n4);border-radius:3px}
 
-/* LAYOUT */
-.app{max-width:1280px;margin:0 auto;padding:24px 20px}
+/* ── LOGIN SCREEN ── */
+#login-screen{display:none;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;gap:24px;background:radial-gradient(ellipse at 50% 30%,#0E2A45 0%,var(--n0) 70%)}
+.login-card{background:var(--n2);border:0.5px solid var(--bd2);border-radius:20px;padding:2.5rem 2rem;text-align:center;width:min(380px,94vw);box-shadow:0 32px 80px rgba(0,0,0,0.6)}
+.login-logo{width:56px;height:56px;background:var(--n4);border:0.5px solid var(--bd2);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 18px}
+.login-logo i{font-size:28px;color:var(--ms)}
+.login-card h1{font-size:20px;font-weight:600;color:var(--tb);margin-bottom:6px}
+.login-card p{font-size:13px;color:var(--tmu);margin-bottom:24px;line-height:1.5}
+.google-btn{display:inline-flex;align-items:center;gap:10px;background:#fff;color:#333;font-size:14px;font-weight:500;padding:10px 20px;border-radius:10px;border:none;cursor:pointer;transition:all 0.2s;font-family:'IBM Plex Sans Thai',sans-serif;width:100%;justify-content:center}
+.google-btn:hover{background:#f5f5f5;box-shadow:0 4px 16px rgba(0,0,0,0.3)}
+.google-btn img{width:20px;height:20px}
 
-/* HEADER */
-.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:20px;border-bottom:0.5px solid var(--bd)}
-.header-left{display:flex;align-items:center;gap:14px}
-.logo{width:38px;height:38px;background:var(--n4);border:0.5px solid var(--bd2);border-radius:10px;display:flex;align-items:center;justify-content:center}
-.logo i{font-size:20px;color:var(--ms)}
-.header-title h1{font-size:18px;font-weight:600;color:var(--tb);letter-spacing:-0.3px}
-.header-title p{font-size:12px;color:var(--tmu);margin-top:1px;font-family:'IBM Plex Mono',monospace}
+/* ── APP ── */
+#app-screen{display:none}
+.app{max-width:1300px;margin:0 auto;padding:22px 18px}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;padding-bottom:18px;border-bottom:0.5px solid var(--bd);flex-wrap:wrap;gap:10px}
+.header-left{display:flex;align-items:center;gap:12px}
+.logo{width:36px;height:36px;background:var(--n4);border:0.5px solid var(--bd2);border-radius:9px;display:flex;align-items:center;justify-content:center}
+.logo i{font-size:19px;color:var(--ms)}
+.header-title h1{font-size:17px;font-weight:600;color:var(--tb);letter-spacing:-0.3px}
+.header-title p{font-size:11px;color:var(--tmu);margin-top:1px;font-family:'IBM Plex Mono',monospace}
 .header-right{display:flex;align-items:center;gap:8px}
-.date-badge{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tmu);background:var(--n3);border:0.5px solid var(--bd);border-radius:6px;padding:5px 10px}
+.user-chip{display:flex;align-items:center;gap:8px;background:var(--n3);border:0.5px solid var(--bd);border-radius:99px;padding:5px 10px 5px 6px}
+.user-chip img{width:24px;height:24px;border-radius:50%;border:0.5px solid var(--bd2)}
+.user-chip span{font-size:12px;color:var(--tm);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-/* SUMMARY */
-.summary{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
-.sc{background:var(--n2);border:0.5px solid var(--bd);border-radius:12px;padding:12px 16px;min-width:90px;position:relative;overflow:hidden;transition:border-color 0.2s}
+/* cards */
+.summary{display:flex;gap:9px;margin-bottom:18px;flex-wrap:wrap}
+.sc{background:var(--n2);border:0.5px solid var(--bd);border-radius:11px;padding:11px 15px;min-width:85px;position:relative;overflow:hidden;transition:border-color 0.2s}
 .sc:hover{border-color:var(--bd2)}
 .sc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--sc-accent,var(--ac))}
-.sc b{display:block;font-size:24px;font-weight:600;color:var(--tb);line-height:1.1;font-family:'IBM Plex Mono',monospace}
+.sc b{display:block;font-size:22px;font-weight:600;color:var(--tb);line-height:1.1;font-family:'IBM Plex Mono',monospace}
 .sc span{font-size:11px;color:var(--tmu)}
-.sc.c-all{--sc-accent:#3A5E82}
-.sc.c-inp{--sc-accent:#7A70EC}
-.sc.c-done{--sc-accent:#5CAA30}
-.sc.c-crit{--sc-accent:#E05050}
-.sc.c-blk{--sc-accent:#E08030}
+.sc.c-all{--sc-accent:#3A5E82}.sc.c-inp{--sc-accent:#7A70EC}.sc.c-done{--sc-accent:#5CAA30}.sc.c-crit{--sc-accent:#E05050}.sc.c-blk{--sc-accent:#E08030}
 
-/* TOOLBAR */
-.toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
-.search-wrap{position:relative;flex:1;min-width:140px}
-.search-wrap i{position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--td);pointer-events:none}
-.search-wrap input{width:100%;padding:7px 10px 7px 30px;font-size:13px;background:var(--n2);border:0.5px solid var(--bd);border-radius:8px;color:var(--tm);font-family:'IBM Plex Sans Thai',sans-serif;outline:none;transition:border-color 0.2s}
-.search-wrap input::placeholder{color:var(--td)}
-.search-wrap input:focus{border-color:var(--ac)}
-select.filter{font-size:12px;padding:7px 10px;border:0.5px solid var(--bd);border-radius:8px;background:var(--n2);color:var(--tm);height:34px;outline:none;font-family:'IBM Plex Sans Thai',sans-serif;cursor:pointer;transition:border-color 0.2s}
+/* toolbar */
+.toolbar{display:flex;gap:7px;margin-bottom:13px;flex-wrap:wrap;align-items:center}
+.sw{position:relative;flex:1;min-width:130px}
+.sw i{position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--td);pointer-events:none}
+.sw input{width:100%;padding:7px 10px 7px 28px;font-size:12px;background:var(--n2);border:0.5px solid var(--bd);border-radius:7px;color:var(--tm);font-family:'IBM Plex Sans Thai',sans-serif;outline:none}
+.sw input::placeholder{color:var(--td)}
+.sw input:focus{border-color:var(--ac)}
+select.filter{font-size:12px;padding:6px 9px;border:0.5px solid var(--bd);border-radius:7px;background:var(--n2);color:var(--tm);height:32px;outline:none;font-family:'IBM Plex Sans Thai',sans-serif;cursor:pointer}
 select.filter:focus{border-color:var(--ac)}
 select.filter option{background:var(--n2)}
-.btn{font-size:12px;padding:7px 14px;border:0.5px solid var(--bd);border-radius:8px;background:var(--n2);color:var(--tm);cursor:pointer;height:34px;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Sans Thai',sans-serif;transition:all 0.15s}
+.btn{font-size:12px;padding:6px 13px;border:0.5px solid var(--bd);border-radius:7px;background:var(--n2);color:var(--tm);cursor:pointer;height:32px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;font-family:'IBM Plex Sans Thai',sans-serif;transition:all 0.15s}
 .btn:hover{background:var(--n4);border-color:var(--sl)}
 .btn.primary{background:var(--ac);color:#F0F8FF;border-color:var(--ac2);font-weight:500}
 .btn.primary:hover{background:var(--ac2)}
-.btn.sm{height:28px;font-size:11px;padding:4px 10px}
+.btn.sm{height:27px;font-size:11px;padding:3px 10px}
+.btn.danger{background:var(--red-bg);color:var(--red-c);border-color:var(--red-bd)}
+.btn.danger:hover{background:#2A0E0E}
 
-/* TABLE */
-.tbl-wrap{border:0.5px solid var(--bd);border-radius:14px;overflow:hidden;background:var(--n1)}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th{text-align:left;padding:10px 13px;font-size:11px;font-weight:500;color:var(--tmu);background:var(--n3);border-bottom:0.5px solid var(--bd);letter-spacing:0.4px;text-transform:uppercase}
-td{padding:10px 13px;border-bottom:0.5px solid var(--bd);color:var(--tm);vertical-align:middle}
+/* table */
+.tbl-wrap{border:0.5px solid var(--bd);border-radius:13px;overflow:hidden;background:var(--n1)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:9px 12px;font-size:10px;font-weight:500;color:var(--tmu);background:var(--n3);border-bottom:0.5px solid var(--bd);letter-spacing:0.5px;text-transform:uppercase}
+td{padding:9px 12px;border-bottom:0.5px solid var(--bd);color:var(--tm);vertical-align:middle}
 tr.pr:last-child td,tr.sr:last-child td{border-bottom:none}
-tr.pr:hover td{background:rgba(255,255,255,0.02)}
+tr.pr:hover td{background:rgba(255,255,255,0.018)}
 tr.sr td{background:#080F18;border-bottom:0.5px solid #0F1E2E}
-tr.sr:hover td{background:#0A1520}
 tr.sr.wf-row td{background:#060D15;border-bottom:0.5px solid #0C1A28}
-tr.sr.wf-row:hover td{background:#081018}
 
-/* BADGES */
-.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:500;white-space:nowrap;font-family:'IBM Plex Mono',monospace}
+/* badges */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:500;white-space:nowrap;font-family:'IBM Plex Mono',monospace}
 .p-critical{background:var(--red-bg);color:var(--red-c);border:0.5px solid var(--red-bd)}
 .p-high{background:var(--yellow-bg);color:var(--yellow-c);border:0.5px solid var(--yellow-bd)}
 .p-medium{background:#0C1C30;color:#85B7EB;border:0.5px solid #1A3E5E}
@@ -100,130 +214,147 @@ tr.sr.wf-row:hover td{background:#081018}
 .j-supplier{background:#0A1E1A;color:#45C0A5;border:0.5px solid #154038}
 .j-other{background:#161410;color:#A0A09A;border:0.5px solid #302E2A}
 
-/* PROGRESS */
-.prog-wrap{display:flex;align-items:center;gap:8px}
-.prog-bar{flex:1;height:4px;background:#0E1E30;border-radius:2px;overflow:hidden;min-width:40px}
-.prog-fill{height:100%;border-radius:2px;background:var(--ac);transition:width 0.4s ease}
-.prog-fill.all-done{background:var(--done-c)}
-.prog-text{font-size:11px;color:var(--tmu);white-space:nowrap;font-family:'IBM Plex Mono',monospace;min-width:50px}
+/* progress */
+.pw{display:flex;align-items:center;gap:7px}
+.pb{flex:1;height:4px;background:#0E1E30;border-radius:2px;overflow:hidden;min-width:36px}
+.pf{height:100%;border-radius:2px;background:var(--ac)}
+.pf.done{background:var(--done-c)}
+.pt{font-size:10px;color:var(--tmu);font-family:'IBM Plex Mono',monospace;min-width:46px}
 
-/* EXPAND BTN */
-.xbtn{background:none;border:none;cursor:pointer;color:var(--td);padding:2px 4px;border-radius:4px;font-size:14px;display:inline-flex;align-items:center;transition:transform 0.2s,color 0.15s;vertical-align:middle}
-.xbtn:hover{color:var(--ms)}
-.xbtn.open{transform:rotate(90deg)}
-.ico{background:none;border:none;cursor:pointer;color:var(--td);padding:3px 5px;border-radius:5px;font-size:14px;display:inline-flex;align-items:center;transition:all 0.15s}
+/* buttons */
+.xbtn{background:none;border:none;cursor:pointer;color:var(--td);padding:2px 4px;border-radius:4px;font-size:13px;display:inline-flex;align-items:center;transition:transform 0.2s,color 0.15s;vertical-align:middle}
+.xbtn:hover{color:var(--ms)}.xbtn.open{transform:rotate(90deg)}
+.ico{background:none;border:none;cursor:pointer;color:var(--td);padding:3px 5px;border-radius:5px;font-size:13px;display:inline-flex;align-items:center;transition:all 0.15s}
 .ico:hover{color:var(--tm);background:var(--n4)}
 .ico.del:hover{color:var(--red-c);background:var(--red-bg)}
 
-/* WF STEP ROW */
-.wf-step{display:flex;align-items:flex-start;gap:9px}
-.wf-num{width:22px;height:22px;border-radius:50%;border:0.5px solid var(--bd2);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--tmu);flex-shrink:0;margin-top:1px;font-family:'IBM Plex Mono',monospace}
+/* workflow */
+.wf-step{display:flex;align-items:flex-start;gap:8px}
+.wf-num{width:20px;height:20px;border-radius:50%;border:0.5px solid var(--bd2);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--tmu);flex-shrink:0;margin-top:1px;font-family:'IBM Plex Mono',monospace}
 .wf-num.done{background:var(--done-bg);border-color:var(--done-bd);color:var(--done-c)}
 .wf-name{font-size:12px;color:var(--tm)}
 .wf-name.done{text-decoration:line-through;color:var(--td)}
-.wf-note{font-size:11px;color:var(--tmu);margin-top:3px;padding-left:2px}
+.wf-note{font-size:11px;color:var(--tmu);margin-top:2px}
 
-/* EMPTY */
-.empty{text-align:center;padding:3rem;color:var(--td)}
-.empty i{font-size:36px;display:block;margin:0 auto 10px;color:var(--n5)}
+/* empty */
+.empty{text-align:center;padding:2.5rem;color:var(--td)}
+.empty i{font-size:32px;display:block;margin:0 auto 8px;color:var(--n5)}
 .empty p{font-size:13px}
 
-/* MODAL */
+/* modal */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(4px)}
-.modal{background:var(--n2);border:0.5px solid var(--bd2);border-radius:16px;padding:1.5rem;width:min(520px,96vw);max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.6)}
-.modal h2{font-size:15px;font-weight:600;margin-bottom:14px;color:var(--tb);display:flex;align-items:center;gap:8px}
-.modal h2 i{font-size:17px;color:var(--ms)}
-.sec-title{font-size:11px;font-weight:500;color:var(--tmu);border-top:0.5px solid var(--bd);padding-top:12px;margin:12px 0 9px;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:0.5px}
-.fr{margin-bottom:10px}
-.fr label{display:block;font-size:11px;color:var(--tmu);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.4px}
-.fr input,.fr select,.fr textarea{width:100%;font-size:13px;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:8px;background:var(--n0);color:var(--tm);outline:none;font-family:'IBM Plex Sans Thai',sans-serif;transition:border-color 0.2s}
+.modal{background:var(--n2);border:0.5px solid var(--bd2);border-radius:15px;padding:1.4rem;width:min(510px,96vw);max-height:90vh;overflow-y:auto;box-shadow:0 24px 70px rgba(0,0,0,0.6)}
+.modal h2{font-size:14px;font-weight:600;margin-bottom:12px;color:var(--tb);display:flex;align-items:center;gap:7px}
+.modal h2 i{font-size:16px;color:var(--ms)}
+.sec-t{font-size:10px;font-weight:500;color:var(--tmu);border-top:0.5px solid var(--bd);padding-top:10px;margin:10px 0 8px;display:flex;align-items:center;gap:5px;text-transform:uppercase;letter-spacing:0.5px}
+.fr{margin-bottom:9px}
+.fr label{display:block;font-size:10px;color:var(--tmu);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.4px}
+.fr input,.fr select,.fr textarea{width:100%;font-size:12px;padding:7px 9px;border:0.5px solid var(--bd2);border-radius:7px;background:var(--n0);color:var(--tm);outline:none;font-family:'IBM Plex Sans Thai',sans-serif;transition:border-color 0.2s}
 .fr input:focus,.fr select:focus,.fr textarea:focus{border-color:var(--ac)}
 .fr select option{background:var(--n0)}
-.fr textarea{resize:vertical;min-height:52px}
+.fr textarea{resize:vertical;min-height:50px}
 .fr input[type=date]{color-scheme:dark;font-family:'IBM Plex Mono',monospace}
-.fg2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
-.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;padding-top:14px;border-top:0.5px solid var(--bd)}
-.tpl-banner{background:linear-gradient(135deg,#0E2040,#162A50);border:0.5px solid var(--bd2);border-radius:10px;padding:11px 13px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:0 11px}
+.ma{display:flex;gap:7px;justify-content:flex-end;margin-top:12px;padding-top:12px;border-top:0.5px solid var(--bd)}
+.tpl-banner{background:linear-gradient(135deg,#0E2040,#162A50);border:0.5px solid var(--bd2);border-radius:9px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .tpl-banner p{font-size:12px;color:var(--tm);flex:1}
 .tpl-banner strong{color:var(--tb)}
-.step-item{background:var(--n0);border:0.5px solid var(--bd);border-radius:9px;padding:10px 11px;margin-bottom:7px;transition:border-color 0.15s}
-.step-item:hover{border-color:var(--bd2)}
-.step-row{display:flex;align-items:center;gap:8px}
-.step-row input[type=checkbox]{accent-color:var(--ac);width:15px;height:15px;flex-shrink:0;cursor:pointer}
-.step-name-text{font-size:12px;color:var(--tm);flex:1}
-.note-input{width:100%;font-size:11px;padding:6px 9px;border:0.5px solid var(--bd);border-radius:6px;background:var(--n2);color:var(--tmu);outline:none;margin-top:7px;font-family:'IBM Plex Sans Thai',sans-serif;transition:border-color 0.2s}
-.note-input:focus{border-color:var(--ac)}
-.note-input::placeholder{color:var(--td)}
-.add-row{display:flex;gap:7px;align-items:center;margin-top:6px}
-.add-row input{flex:1;font-size:12px;padding:7px 10px;border:0.5px solid var(--bd2);border-radius:8px;background:var(--n0);color:var(--tm);outline:none;font-family:'IBM Plex Sans Thai',sans-serif;transition:border-color 0.2s}
-.add-row input:focus{border-color:var(--ac)}
+.si{background:var(--n0);border:0.5px solid var(--bd);border-radius:8px;padding:9px 10px;margin-bottom:6px}
+.si:hover{border-color:var(--bd2)}
+.sr2{display:flex;align-items:center;gap:7px}
+.sr2 input[type=checkbox]{accent-color:var(--ac);width:14px;height:14px;flex-shrink:0;cursor:pointer}
+.sn{font-size:12px;color:var(--tm);flex:1}
+.ni{width:100%;font-size:11px;padding:5px 8px;border:0.5px solid var(--bd);border-radius:6px;background:var(--n2);color:var(--tmu);outline:none;margin-top:6px;font-family:'IBM Plex Sans Thai',sans-serif}
+.ni:focus{border-color:var(--ac)}
+.ni::placeholder{color:var(--td)}
+.ar{display:flex;gap:6px;margin-top:5px}
+.ar input{flex:1;font-size:12px;padding:6px 9px;border:0.5px solid var(--bd2);border-radius:7px;background:var(--n0);color:var(--tm);outline:none;font-family:'IBM Plex Sans Thai',sans-serif}
+.ar input:focus{border-color:var(--ac)}
 
-/* STATUS SELECT IN TABLE */
-.status-sel{border:none!important;cursor:pointer;font-size:11px;font-weight:500;padding:3px 5px!important;color:inherit;background:transparent!important;font-family:'IBM Plex Mono',monospace}
+/* sync indicator */
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--done-c);display:inline-block;margin-right:5px}
+.sync-dot.off{background:var(--red-c)}
 
-/* TOAST */
-.toast{position:fixed;bottom:24px;right:24px;background:var(--n4);border:0.5px solid var(--bd2);border-radius:10px;padding:10px 16px;font-size:13px;color:var(--tb);z-index:2000;box-shadow:0 8px 32px rgba(0,0,0,0.5);transform:translateY(20px);opacity:0;transition:all 0.3s;pointer-events:none}
+/* toast */
+.toast{position:fixed;bottom:22px;right:22px;background:var(--n4);border:0.5px solid var(--bd2);border-radius:9px;padding:9px 15px;font-size:12px;color:var(--tb);z-index:2000;box-shadow:0 8px 28px rgba(0,0,0,0.5);transform:translateY(16px);opacity:0;transition:all 0.25s;pointer-events:none}
 .toast.show{transform:translateY(0);opacity:1}
 
-@media(max-width:700px){
-  .summary{gap:7px}
-  .sc{min-width:70px;padding:10px 12px}
-  .sc b{font-size:20px}
+/* status select inline */
+.ssel{border:none!important;cursor:pointer;font-size:10px;font-weight:500;padding:2px 4px!important;color:inherit;background:transparent!important;font-family:'IBM Plex Mono',monospace}
+
+@media(max-width:680px){
   .fg2{grid-template-columns:1fr}
-  th,td{padding:8px 9px}
+  th,td{padding:7px 8px;font-size:11px}
+  .summary{gap:6px}
+  .sc{min-width:68px;padding:9px 11px}
+  .sc b{font-size:18px}
 }
 </style>
 </head>
 <body>
-<div class="app">
-  <div class="header">
-    <div class="header-left">
-      <div class="logo"><i class="ti ti-layout-list"></i></div>
-      <div class="header-title">
-        <h1>Workload Tracker</h1>
-        <p id="date-str"></p>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo"><i class="ti ti-layout-list"></i></div>
+    <h1>Workload Tracker</h1>
+    <p>ระบบติดตาม task และ workflow<br>ข้อมูล sync ผ่าน cloud ได้ทุกอุปกรณ์</p>
+    <button class="google-btn" onclick="doSignIn()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+      เข้าสู่ระบบด้วย Google
+    </button>
+  </div>
+</div>
+
+<!-- APP SCREEN -->
+<div id="app-screen">
+  <div class="app">
+    <div class="header">
+      <div class="header-left">
+        <div class="logo"><i class="ti ti-layout-list"></i></div>
+        <div class="header-title">
+          <h1>Workload Tracker</h1>
+          <p id="date-str"></p>
+        </div>
+      </div>
+      <div class="header-right">
+        <span id="sync-status" title="Cloud sync"></span>
+        <div class="user-chip" id="user-chip"></div>
+        <button class="btn danger" onclick="doSignOut()"><i class="ti ti-logout"></i> ออกจากระบบ</button>
       </div>
     </div>
-    <div class="header-right">
-      <button class="btn" onclick="exportJSON()" title="Export JSON"><i class="ti ti-download"></i> Export</button>
-      <button class="btn" onclick="document.getElementById('imp').click()" title="Import JSON"><i class="ti ti-upload"></i> Import</button>
-      <input type="file" id="imp" accept=".json" style="display:none" onchange="importJSON(event)">
+
+    <div class="summary" id="summary"></div>
+
+    <div class="toolbar">
+      <div class="sw"><i class="ti ti-search"></i><input type="text" id="fQ" placeholder="ค้นหา task..." oninput="render()"></div>
+      <select class="filter" id="fJ" onchange="render()">
+        <option value="">Job type ทั้งหมด</option>
+        <option>Technical</option><option>Spare Part</option><option>Order Spare Part</option>
+        <option>Follow Supplier</option><option>Other</option>
+      </select>
+      <select class="filter" id="fP" onchange="render()">
+        <option value="">Priority ทั้งหมด</option>
+        <option>Critical</option><option>High</option><option>Medium</option><option>Low</option>
+      </select>
+      <select class="filter" id="fS" onchange="render()">
+        <option value="">Status ทั้งหมด</option>
+        <option>To Do</option><option>In Progress</option><option>Review</option><option>Done</option><option>Blocked</option>
+      </select>
+      <button class="btn primary" onclick="openModal()"><i class="ti ti-plus"></i> เพิ่ม Task</button>
     </div>
-  </div>
 
-  <div class="summary" id="summary"></div>
-
-  <div class="toolbar">
-    <div class="search-wrap">
-      <i class="ti ti-search"></i>
-      <input type="text" id="fQ" placeholder="ค้นหา task..." oninput="render()">
+    <div class="tbl-wrap">
+      <table>
+        <colgroup>
+          <col style="width:21%"><col style="width:13%"><col style="width:10%"><col style="width:11%"><col style="width:16%"><col style="width:15%"><col style="width:11%"><col style="width:3%">
+        </colgroup>
+        <thead>
+          <tr><th>Task</th><th>Job type</th><th>Priority</th><th>Status</th><th>Detail</th><th>Progress</th><th>Due date</th><th></th></tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
     </div>
-    <select class="filter" id="fJ" onchange="render()">
-      <option value="">Job type ทั้งหมด</option>
-      <option>Technical</option><option>Spare Part</option><option>Order Spare Part</option>
-      <option>Follow Supplier</option><option>Other</option>
-    </select>
-    <select class="filter" id="fP" onchange="render()">
-      <option value="">Priority ทั้งหมด</option>
-      <option>Critical</option><option>High</option><option>Medium</option><option>Low</option>
-    </select>
-    <select class="filter" id="fS" onchange="render()">
-      <option value="">Status ทั้งหมด</option>
-      <option>To Do</option><option>In Progress</option><option>Review</option><option>Done</option><option>Blocked</option>
-    </select>
-    <button class="btn primary" onclick="openModal()"><i class="ti ti-plus"></i> เพิ่ม Task</button>
-  </div>
-
-  <div class="tbl-wrap">
-    <table>
-      <colgroup>
-        <col style="width:21%"><col style="width:13%"><col style="width:10%"><col style="width:11%"><col style="width:17%"><col style="width:15%"><col style="width:10%"><col style="width:3%">
-      </colgroup>
-      <thead>
-        <tr><th>Task</th><th>Job type</th><th>Priority</th><th>Status</th><th>Detail</th><th>Progress</th><th>Due date</th><th></th></tr>
-      </thead>
-      <tbody id="tbody"></tbody>
-    </table>
   </div>
 </div>
 
@@ -249,7 +380,7 @@ tr.sr.wf-row:hover td{background:#081018}
     </div>
     <div class="fr"><label>Detail / หมายเหตุ</label><textarea id="fdt" placeholder="รายละเอียดงาน..."></textarea></div>
     <div id="step-section"></div>
-    <div class="modal-actions">
+    <div class="ma">
       <button class="btn" onclick="closeModal()"><i class="ti ti-x"></i> ยกเลิก</button>
       <button class="btn primary" onclick="saveTask()"><i class="ti ti-check"></i> บันทึก</button>
     </div>
@@ -259,7 +390,8 @@ tr.sr.wf-row:hover td{background:#081018}
 <div class="toast" id="toast"></div>
 
 <script>
-const TEMPLATES={
+/* ── TEMPLATES ── */
+const TPL = {
   'Spare Part':[
     {name:'Create document',note:'',done:false},
     {name:'Request procurement for send to repair',note:'',done:false},
@@ -279,24 +411,35 @@ const jBadge={Technical:'j-technical','Spare Part':'j-spare','Order Spare Part':
 const pBadge={Critical:'p-critical',High:'p-high',Medium:'p-medium',Low:'p-low'};
 const sBadge={'To Do':'s-todo','In Progress':'s-inprogress',Review:'s-review',Done:'s-done',Blocked:'s-blocked'};
 
-let tasks=[],expanded={},editId=null,mSteps=[],mSubs=[],mJT='Technical';
+window._tasks=[];
+let expanded={},editId=null,mSteps=[],mSubs=[],mJT='Technical';
 
-function load(){try{const d=localStorage.getItem('wl_v4');if(d)tasks=JSON.parse(d)}catch(e){tasks=[]}}
-function save(){try{localStorage.setItem('wl_v4',JSON.stringify(tasks))}catch(e){}}
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function isWF(jt){return jt==='Spare Part'||jt==='Order Spare Part'}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2)}
 
 function showToast(msg){
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('show');
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2200);
 }
 
+function showLogin(){
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app-screen').style.display='none';
+}
+function showApp(user){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app-screen').style.display='block';
+  setDate();
+  document.getElementById('user-chip').innerHTML=`
+    <img src="${user.photoURL||'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg'}" alt="">
+    <span>${user.displayName||user.email}</span>`;
+  document.getElementById('sync-status').innerHTML='<span class="sync-dot" title="Cloud sync active"></span>';
+}
+
 function setDate(){
-  const d=new Date();
-  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  document.getElementById('date-str').textContent=`${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  const d=new Date();const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];const m=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const el=document.getElementById('date-str');if(el)el.textContent=`${days[d.getDay()]} ${d.getDate()} ${m[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 function calcProg(t){
@@ -309,26 +452,28 @@ function progHTML(t){
   const p=calcProg(t);
   if(!p)return'<span style="color:var(--td);font-size:11px;font-family:\'IBM Plex Mono\',monospace">—</span>';
   const pct=Math.round(p.done/p.total*100);
-  const cls=p.done===p.total?'prog-fill all-done':'prog-fill';
+  const cls=p.done===p.total?'pf done':'pf';
   const lbl=isWF(t.jobtype)?`${p.done}/${p.total} steps`:`${p.done}/${p.total} done`;
-  return`<div class="prog-wrap"><div class="prog-bar"><div class="${cls}" style="width:${pct}%"></div></div><span class="prog-text">${lbl}</span></div>`;
+  return`<div class="pw"><div class="pb"><div class="${cls}" style="width:${pct}%"></div></div><span class="pt">${lbl}</span></div>`;
 }
 
 function render(){
-  const q=document.getElementById('fQ').value.toLowerCase();
-  const fj=document.getElementById('fJ').value;
-  const fp=document.getElementById('fP').value;
-  const fs=document.getElementById('fS').value;
-  const fil=tasks.filter(t=>{
+  const q=(document.getElementById('fQ')||{}).value||'';
+  const ql=q.toLowerCase();
+  const fj=(document.getElementById('fJ')||{}).value||'';
+  const fp=(document.getElementById('fP')||{}).value||'';
+  const fs=(document.getElementById('fS')||{}).value||'';
+  const fil=window._tasks.filter(t=>{
     if(fj&&t.jobtype!==fj)return false;
     if(fp&&t.priority!==fp)return false;
     if(fs&&t.status!==fs)return false;
-    if(q&&!(t.name.toLowerCase().includes(q)||(t.detail||'').toLowerCase().includes(q)))return false;
+    if(ql&&!(t.name.toLowerCase().includes(ql)||(t.detail||'').toLowerCase().includes(ql)))return false;
     return true;
   });
   const tbody=document.getElementById('tbody');
+  if(!tbody)return;
   if(!fil.length){
-    tbody.innerHTML='<tr><td colspan="8" class="empty"><i class="ti ti-inbox"></i><p>ยังไม่มี task — กด "+ เพิ่ม Task" เพื่อเริ่ม</p></td></tr>';
+    tbody.innerHTML='<tr><td colspan="8" class="empty"><i class="ti ti-inbox"></i><p>ยังไม่มี task</p></td></tr>';
   }else{
     let h='';
     fil.forEach(t=>{
@@ -341,30 +486,30 @@ function render(){
           ${esc(t.name)}
         </td>
         <td><span class="badge ${jBadge[t.jobtype]||'j-other'}">${esc(t.jobtype)}</span></td>
-        <td><span class="badge ${pBadge[t.priority]}">${t.priority}</span></td>
+        <td><span class="badge ${pBadge[t.priority]||'p-medium'}">${t.priority||'—'}</span></td>
         <td>
-          <select class="badge ${sBadge[t.status]} status-sel" onchange="chgStatus('${t.id}',this.value)">
+          <select class="badge ${sBadge[t.status]||''} ssel" onchange="chgStatus('${t.id}',this.value)">
             ${['To Do','In Progress','Review','Done','Blocked'].map(s=>`<option${t.status===s?' selected':''}>${s}</option>`).join('')}
           </select>
         </td>
-        <td style="font-size:12px;color:var(--tmu)">${esc(t.detail)||'—'}</td>
+        <td style="font-size:11px;color:var(--tmu)">${esc(t.detail)||'—'}</td>
         <td>${progHTML(t)}</td>
-        <td style="font-size:11px;color:var(--tmu);font-family:'IBM Plex Mono',monospace">${t.due||'—'}</td>
+        <td style="font-size:10px;color:var(--tmu);font-family:'IBM Plex Mono',monospace">${t.due||'—'}</td>
         <td style="white-space:nowrap">
-          <button class="ico" onclick="openModal('${t.id}')" title="แก้ไข"><i class="ti ti-edit"></i></button>
-          <button class="ico del" onclick="delTask('${t.id}')" title="ลบ"><i class="ti ti-trash"></i></button>
+          <button class="ico" onclick="openModal('${t.id}')"><i class="ti ti-edit"></i></button>
+          <button class="ico del" onclick="delTask('${t.id}')"><i class="ti ti-trash"></i></button>
         </td>
       </tr>`;
       if(items.length&&isOpen){
         if(wf){
           (t.steps||[]).forEach((s,si)=>{
             h+=`<tr class="sr wf-row">
-              <td colspan="4" style="padding-left:32px">
+              <td colspan="4" style="padding-left:30px">
                 <div class="wf-step">
                   <div class="wf-num${s.done?' done':''}">${si+1}</div>
                   <div>
                     <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer">
-                      <input type="checkbox" ${s.done?'checked':''} onchange="toggleStep('${t.id}',${si})" style="accent-color:var(--ac);width:14px;height:14px">
+                      <input type="checkbox" ${s.done?'checked':''} onchange="toggleStep('${t.id}',${si})" style="accent-color:var(--ac);width:13px;height:13px">
                       <span class="wf-name${s.done?' done':''}">${esc(s.name)}</span>
                     </label>
                     ${s.note?`<div class="wf-note">${esc(s.note)}</div>`:''}
@@ -378,9 +523,9 @@ function render(){
         }else{
           (t.subs||[]).forEach((s,si)=>{
             h+=`<tr class="sr">
-              <td colspan="4" style="padding-left:32px;color:var(--tmu)">
+              <td colspan="4" style="padding-left:30px;color:var(--tmu)">
                 <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:12px">
-                  <input type="checkbox" ${s.done?'checked':''} onchange="toggleSub('${t.id}',${si})" style="accent-color:var(--ac);width:14px;height:14px">
+                  <input type="checkbox" ${s.done?'checked':''} onchange="toggleSub('${t.id}',${si})" style="accent-color:var(--ac);width:13px;height:13px">
                   <span${s.done?' style="text-decoration:line-through;color:var(--td)"':''}>${esc(s.name)}</span>
                 </label>
               </td>
@@ -397,10 +542,12 @@ function render(){
 }
 
 function renderSum(){
+  const tasks=window._tasks;
   const tot=tasks.length,done=tasks.filter(t=>t.status==='Done').length;
   const blk=tasks.filter(t=>t.status==='Blocked').length,crit=tasks.filter(t=>t.priority==='Critical').length;
   const inp=tasks.filter(t=>t.status==='In Progress').length;
-  document.getElementById('summary').innerHTML=`
+  const el=document.getElementById('summary');if(!el)return;
+  el.innerHTML=`
     <div class="sc c-all"><b>${tot}</b><span>ทั้งหมด</span></div>
     <div class="sc c-inp"><b>${inp}</b><span>In Progress</span></div>
     <div class="sc c-done"><b>${done}</b><span>Done</span></div>
@@ -410,91 +557,68 @@ function renderSum(){
 
 function toggleExp(id){expanded[id]=!expanded[id];render()}
 
-/* MODAL */
+/* ── MODAL ── */
 function renderStepSection(){
-  const wf=isWF(mJT);
-  const tpl=TEMPLATES[mJT];
-  let html='';
-  if(wf&&!editId&&tpl){
-    html+=`<div class="tpl-banner">
-      <i class="ti ti-template" style="font-size:18px;color:var(--ms);flex-shrink:0"></i>
+  const wf=isWF(mJT);const tpl=TPL[mJT];
+  let h='';
+  if(wf&&!editId&&tpl)
+    h+=`<div class="tpl-banner"><i class="ti ti-template" style="font-size:17px;color:var(--ms);flex-shrink:0"></i>
       <p>มี <strong>Workflow template</strong> สำหรับ ${mJT}</p>
       <button class="btn sm primary" onclick="applyTpl()"><i class="ti ti-check"></i> ใช้ template</button>
-      <button class="btn sm" onclick="clearSteps()">ไม่ใช้</button>
-    </div>`;
-  }
+      <button class="btn sm" onclick="clearSteps()">ไม่ใช้</button></div>`;
   if(wf){
     const list=mSteps.map((s,i)=>`
-      <div class="step-item">
-        <div class="step-row">
-          <input type="checkbox" ${s.done?'checked':''} onchange="mToggleStep(${i})">
-          <span class="step-name-text">${esc(s.name)}</span>
-          <button class="ico del" onclick="mDelStep(${i})"><i class="ti ti-x"></i></button>
-        </div>
-        <input class="note-input" placeholder="หมายเหตุ..." value="${esc(s.note)}" oninput="mSteps[${i}].note=this.value">
-      </div>`).join('');
-    html+=`<div class="sec-title"><i class="ti ti-flag" style="font-size:13px"></i>Workflow Milestones <span style="color:var(--td);text-transform:none;font-weight:400">(${mSteps.length} steps)</span></div>
-      <div id="item-list">${list||'<p style="font-size:11px;color:var(--td);padding:4px 0">ยังไม่มี step</p>'}</div>
-      <div class="add-row">
-        <input id="ns" placeholder="ชื่อ step ใหม่..." onkeydown="if(event.key==='Enter')addStep()">
-        <button class="btn sm primary" onclick="addStep()"><i class="ti ti-plus"></i> เพิ่ม step</button>
-      </div>`;
+      <div class="si"><div class="sr2">
+        <input type="checkbox" ${s.done?'checked':''} onchange="mTStep(${i})">
+        <span class="sn">${esc(s.name)}</span>
+        <button class="ico del" onclick="mDStep(${i})"><i class="ti ti-x"></i></button>
+      </div>
+      <input class="ni" placeholder="หมายเหตุ..." value="${esc(s.note)}" oninput="mSteps[${i}].note=this.value"></div>`).join('');
+    h+=`<div class="sec-t"><i class="ti ti-flag" style="font-size:12px"></i>Workflow Milestones <span style="text-transform:none;font-weight:400;color:var(--td)">(${mSteps.length} steps)</span></div>
+      <div id="ilist">${list||'<p style="font-size:11px;color:var(--td);padding:3px 0">ยังไม่มี step</p>'}</div>
+      <div class="ar"><input id="ns" placeholder="ชื่อ step ใหม่..." onkeydown="if(event.key==='Enter')addStep()">
+      <button class="btn sm primary" onclick="addStep()"><i class="ti ti-plus"></i></button></div>`;
   }else{
     const list=mSubs.map((s,i)=>`
-      <div class="step-item">
-        <div class="step-row">
-          <input type="checkbox" ${s.done?'checked':''} onchange="mToggleSub(${i})">
-          <span class="step-name-text">${esc(s.name)}</span>
-          <button class="ico del" onclick="mDelSub(${i})"><i class="ti ti-x"></i></button>
-        </div>
-        <input class="note-input" placeholder="หมายเหตุ..." value="${esc(s.note||'')}" oninput="mSubs[${i}].note=this.value">
-      </div>`).join('');
-    html+=`<div class="sec-title"><i class="ti ti-subtask" style="font-size:13px"></i>Sub-tasks <span style="color:var(--td);text-transform:none;font-weight:400">(${mSubs.length})</span></div>
-      <div id="item-list">${list||'<p style="font-size:11px;color:var(--td);padding:4px 0">ยังไม่มี sub-task</p>'}</div>
-      <div class="add-row">
-        <input id="ns" placeholder="ชื่อ sub-task ใหม่..." onkeydown="if(event.key==='Enter')addSub()">
-        <button class="btn sm primary" onclick="addSub()"><i class="ti ti-plus"></i> เพิ่ม</button>
-      </div>`;
-  }
-  document.getElementById('step-section').innerHTML=html;
-}
-
-function refreshList(){
-  const wf=isWF(mJT);
-  const items=wf?mSteps:mSubs;
-  const el=document.getElementById('item-list');
-  if(!el)return;
-  if(!items.length){el.innerHTML=`<p style="font-size:11px;color:var(--td);padding:4px 0">ยังไม่มี ${wf?'step':'sub-task'}</p>`;return}
-  el.innerHTML=items.map((s,i)=>`
-    <div class="step-item">
-      <div class="step-row">
-        <input type="checkbox" ${s.done?'checked':''} onchange="${wf?'mToggleStep':'mToggleSub'}(${i})">
-        <span class="step-name-text">${esc(s.name)}</span>
-        <button class="ico del" onclick="${wf?'mDelStep':'mDelSub'}(${i})"><i class="ti ti-x"></i></button>
+      <div class="si"><div class="sr2">
+        <input type="checkbox" ${s.done?'checked':''} onchange="mTSub(${i})">
+        <span class="sn">${esc(s.name)}</span>
+        <button class="ico del" onclick="mDSub(${i})"><i class="ti ti-x"></i></button>
       </div>
-      <input class="note-input" placeholder="หมายเหตุ..." value="${esc(s.note||'')}" oninput="${wf?'mSteps':'mSubs'}[${i}].note=this.value">
-    </div>`).join('');
+      <input class="ni" placeholder="หมายเหตุ..." value="${esc(s.note||'')}" oninput="mSubs[${i}].note=this.value"></div>`).join('');
+    h+=`<div class="sec-t"><i class="ti ti-subtask" style="font-size:12px"></i>Sub-tasks <span style="text-transform:none;font-weight:400;color:var(--td)">(${mSubs.length})</span></div>
+      <div id="ilist">${list||'<p style="font-size:11px;color:var(--td);padding:3px 0">ยังไม่มี sub-task</p>'}</div>
+      <div class="ar"><input id="ns" placeholder="ชื่อ sub-task ใหม่..." onkeydown="if(event.key==='Enter')addSub()">
+      <button class="btn sm primary" onclick="addSub()"><i class="ti ti-plus"></i></button></div>`;
+  }
+  document.getElementById('step-section').innerHTML=h;
 }
 
-function onJTChange(v){
-  const wasWF=isWF(mJT);const nowWF=isWF(v);
-  mJT=v;
-  if(wasWF!==nowWF){mSteps=[];mSubs=[]}
-  renderStepSection();
+function refList(){
+  const wf=isWF(mJT);const items=wf?mSteps:mSubs;const el=document.getElementById('ilist');if(!el)return;
+  if(!items.length){el.innerHTML=`<p style="font-size:11px;color:var(--td);padding:3px 0">ยังไม่มี ${wf?'step':'sub-task'}</p>`;return}
+  el.innerHTML=items.map((s,i)=>`
+    <div class="si"><div class="sr2">
+      <input type="checkbox" ${s.done?'checked':''} onchange="${wf?'mTStep':'mTSub'}(${i})">
+      <span class="sn">${esc(s.name)}</span>
+      <button class="ico del" onclick="${wf?'mDStep':'mDSub'}(${i})"><i class="ti ti-x"></i></button>
+    </div>
+    <input class="ni" placeholder="หมายเหตุ..." value="${esc(s.note||'')}" oninput="${wf?'mSteps':'mSubs'}[${i}].note=this.value"></div>`).join('');
 }
 
-function applyTpl(){mSteps=TEMPLATES[mJT].map(s=>({...s,done:false}));renderStepSection()}
+function onJTChange(v){const wasWF=isWF(mJT);const nowWF=isWF(v);mJT=v;if(wasWF!==nowWF){mSteps=[];mSubs=[]}renderStepSection()}
+function applyTpl(){mSteps=TPL[mJT].map(s=>({...s,done:false}));renderStepSection()}
 function clearSteps(){mSteps=[];renderStepSection()}
-function mToggleStep(i){mSteps[i].done=!mSteps[i].done;refreshList()}
-function mDelStep(i){mSteps.splice(i,1);refreshList()}
-function mToggleSub(i){mSubs[i].done=!mSubs[i].done;refreshList()}
-function mDelSub(i){mSubs.splice(i,1);refreshList()}
-function addStep(){const el=document.getElementById('ns');const n=(el?el.value:'').trim();if(!n)return;mSteps.push({name:n,note:'',done:false});el.value='';refreshList()}
-function addSub(){const el=document.getElementById('ns');const n=(el?el.value:'').trim();if(!n)return;mSubs.push({name:n,note:'',done:false});el.value='';refreshList()}
+function mTStep(i){mSteps[i].done=!mSteps[i].done;refList()}
+function mDStep(i){mSteps.splice(i,1);refList()}
+function mTSub(i){mSubs[i].done=!mSubs[i].done;refList()}
+function mDSub(i){mSubs.splice(i,1);refList()}
+function addStep(){const el=document.getElementById('ns');const n=(el?el.value:'').trim();if(!n)return;mSteps.push({name:n,note:'',done:false});el.value='';refList()}
+function addSub(){const el=document.getElementById('ns');const n=(el?el.value:'').trim();if(!n)return;mSubs.push({name:n,note:'',done:false});el.value='';refList()}
 
 function openModal(id){
   editId=id||null;
-  const t=id?tasks.find(x=>x.id===id):null;
+  const t=id?window._tasks.find(x=>x.id===id):null;
   mJT=t?t.jobtype:'Technical';
   mSteps=t&&t.steps?JSON.parse(JSON.stringify(t.steps)):[];
   mSubs=t&&t.subs?JSON.parse(JSON.stringify(t.subs)):[];
@@ -513,13 +637,12 @@ function openModal(id){
 function closeModal(){document.getElementById('modalBg').style.display='none';editId=null;mSteps=[];mSubs=[];mJT='Technical'}
 function bgClose(e){if(e.target===document.getElementById('modalBg'))closeModal()}
 
-function saveTask(){
+async function saveTask(){
   const name=(document.getElementById('fn').value||'').trim();
   if(!name){document.getElementById('fn').focus();return}
   const wf=isWF(mJT);
   const obj={
-    id:editId||Date.now().toString(36)+Math.random().toString(36).slice(2),
-    name,jobtype:mJT,
+    id:editId||uid(),name,jobtype:mJT,
     priority:document.getElementById('fp').value,
     status:document.getElementById('fs').value,
     detail:(document.getElementById('fdt').value||'').trim(),
@@ -527,51 +650,44 @@ function saveTask(){
     steps:wf?JSON.parse(JSON.stringify(mSteps)):[],
     subs:!wf?JSON.parse(JSON.stringify(mSubs)):[]
   };
-  if(editId){tasks=tasks.map(t=>t.id===editId?obj:t)}else{tasks.push(obj)}
-  save();closeModal();render();showToast(editId?'✓ อัปเดต task แล้ว':'✓ เพิ่ม task ใหม่แล้ว');
+  closeModal();
+  await window.saveTaskToDb(obj);
+  showToast(editId?'✓ อัปเดต task แล้ว':'✓ เพิ่ม task ใหม่แล้ว');
 }
 
-function chgStatus(id,val){tasks=tasks.map(t=>t.id===id?{...t,status:val}:t);save();render();showToast('✓ อัปเดต status แล้ว')}
-
-function toggleStep(tid,si){
-  tasks=tasks.map(t=>{if(t.id!==tid)return t;const steps=[...t.steps];steps[si]={...steps[si],done:!steps[si].done};return{...t,steps}});
-  save();render();
-}
-function toggleSub(tid,si){
-  tasks=tasks.map(t=>{if(t.id!==tid)return t;const subs=[...t.subs];subs[si]={...subs[si],done:!subs[si].done};return{...t,subs}});
-  save();render();
-}
-function delSub(tid,si){
-  tasks=tasks.map(t=>t.id!==tid?t:{...t,subs:t.subs.filter((_,i)=>i!==si)});
-  save();render();
-}
-function delTask(id){
-  if(confirm('ลบ task นี้?')){tasks=tasks.filter(t=>t.id!==id);delete expanded[id];save();render();showToast('🗑 ลบ task แล้ว')}
+async function chgStatus(id,val){
+  const t=window._tasks.find(x=>x.id===id);if(!t)return;
+  await window.saveTaskToDb({...t,status:val});
+  showToast('✓ อัปเดต status แล้ว');
 }
 
-function exportJSON(){
-  const blob=new Blob([JSON.stringify(tasks,null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download=`workload-${new Date().toISOString().slice(0,10)}.json`;a.click();
-  showToast('✓ Export สำเร็จ');
+async function toggleStep(tid,si){
+  const t=window._tasks.find(x=>x.id===tid);if(!t)return;
+  const steps=JSON.parse(JSON.stringify(t.steps||[]));
+  steps[si].done=!steps[si].done;
+  await window.saveTaskToDb({...t,steps});
 }
 
-function importJSON(e){
-  const file=e.target.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    try{
-      const data=JSON.parse(ev.target.result);
-      if(Array.isArray(data)){tasks=data;save();render();showToast(`✓ Import ${data.length} tasks สำเร็จ`)}
-      else{alert('ไฟล์ไม่ถูกต้องครับ')}
-    }catch(err){alert('อ่านไฟล์ไม่ได้ครับ: '+err.message)}
-  };
-  reader.readAsText(file);
-  e.target.value='';
+async function toggleSub(tid,si){
+  const t=window._tasks.find(x=>x.id===tid);if(!t)return;
+  const subs=JSON.parse(JSON.stringify(t.subs||[]));
+  subs[si].done=!subs[si].done;
+  await window.saveTaskToDb({...t,subs});
 }
 
-// INIT
-load();setDate();render();
+async function delSub(tid,si){
+  const t=window._tasks.find(x=>x.id===tid);if(!t)return;
+  const subs=(t.subs||[]).filter((_,i)=>i!==si);
+  await window.saveTaskToDb({...t,subs});
+}
+
+async function delTask(id){
+  if(confirm('ลบ task นี้?')){
+    delete expanded[id];
+    await window.deleteTaskFromDb(id);
+    showToast('🗑 ลบ task แล้ว');
+  }
+}
 </script>
 </body>
 </html>
