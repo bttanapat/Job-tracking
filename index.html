@@ -307,7 +307,7 @@ tr.sr.wf-row td{background:#060D15;border-bottom:0.5px solid #0C1A28}
         <option value="">Status ทั้งหมด</option>
         <option>To Do</option><option>In Progress</option><option>Review</option><option>Done</option><option>Blocked</option>
       </select>
-      <button class="btn" onclick="resetSort()" title="Reset การเรียง"><i class="ti ti-arrows-sort"></i> Auto sort</button>
+      <button class="btn" id="btn-reset-sort" title="Reset การเรียง"><i class="ti ti-arrows-sort"></i> Auto sort</button>
       <button class="btn primary" onclick="openModal()"><i class="ti ti-plus"></i> เพิ่ม Task</button>
     </div>
 
@@ -318,15 +318,15 @@ tr.sr.wf-row td{background:#060D15;border-bottom:0.5px solid #0C1A28}
         </colgroup>
         <thead>
           <tr>
-            <th class="sortable" onclick="sortBy('name')">Task <span id="sort-name" class="sort-icon"></span></th>
-            <th class="sortable" onclick="sortBy('machine')">Machine No <span id="sort-machine" class="sort-icon"></span></th>
-            <th class="sortable" onclick="sortBy('jobtype')">Job type <span id="sort-jobtype" class="sort-icon"></span></th>
-            <th class="sortable" onclick="sortBy('priority')">Priority <span id="sort-priority" class="sort-icon">↑</span></th>
-            <th class="sortable" onclick="sortBy('status')">Status <span id="sort-status" class="sort-icon"></span></th>
+            <th class="sortable" data-sort="name">Task <span id="sort-name" class="sort-icon"></span></th>
+            <th class="sortable" data-sort="machine">Machine No <span id="sort-machine" class="sort-icon"></span></th>
+            <th class="sortable" data-sort="jobtype">Job type <span id="sort-jobtype" class="sort-icon"></span></th>
+            <th class="sortable" data-sort="priority">Priority <span id="sort-priority" class="sort-icon">↑</span></th>
+            <th class="sortable" data-sort="status">Status <span id="sort-status" class="sort-icon"></span></th>
             <th>Detail</th>
             <th>Progress</th>
-            <th class="sortable" onclick="sortBy('due')">Due date <span id="sort-due" class="sort-icon"></span></th>
-            <th class="sortable" onclick="sortBy('createdAt')">Created <span id="sort-createdAt" class="sort-icon"></span></th>
+            <th class="sortable" data-sort="due">Due date <span id="sort-due" class="sort-icon"></span></th>
+            <th class="sortable" data-sort="createdAt">Created <span id="sort-createdAt" class="sort-icon"></span></th>
             <th></th>
           </tr>
         </thead>
@@ -684,6 +684,13 @@ async function delTask(id){
     showToast('🗑 ลบ task แล้ว');
   }
 }
+// bind sort headers via event delegation (works with CSP)
+document.addEventListener('click', function(e){
+  const th = e.target.closest('th[data-sort]');
+  if(th) sortBy(th.dataset.sort);
+  const btn = e.target.closest('#btn-reset-sort');
+  if(btn) resetSort();
+});
 </script>
 </body>
 </html>
