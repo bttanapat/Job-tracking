@@ -252,6 +252,9 @@ tr.sr.wf-row td{background:#060D15;border-bottom:0.5px solid #0C1A28}
   .sc{min-width:68px;padding:9px 11px}
   .sc b{font-size:18px}
 }
+
+.sortable{cursor:pointer;user-select:none}.sortable:hover{color:var(--tb)}.sort-icon{font-size:10px;margin-left:3px;color:var(--ac)}
+.ac-wrap{position:relative}.ac-list{position:absolute;top:100%;left:0;right:0;background:var(--n2);border:0.5px solid var(--bd2);border-radius:7px;z-index:100;max-height:160px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.4);margin-top:2px}.ac-item{padding:8px 10px;font-size:12px;cursor:pointer;color:var(--tm)}.ac-item:hover{background:var(--n4);color:var(--tb)}
 </style>
 </head>
 <body>
@@ -310,10 +313,10 @@ tr.sr.wf-row td{background:#060D15;border-bottom:0.5px solid #0C1A28}
     <div class="tbl-wrap">
       <table>
         <colgroup>
-          <col style="width:21%"><col style="width:13%"><col style="width:10%"><col style="width:11%"><col style="width:16%"><col style="width:15%"><col style="width:11%"><col style="width:3%">
+          <col style="width:15%"><col style="width:8%"><col style="width:10%"><col style="width:8%"><col style="width:9%"><col style="width:13%"><col style="width:11%"><col style="width:8%"><col style="width:8%"><col style="width:3%">
         </colgroup>
         <thead>
-          <tr><th>Task</th><th>Job type</th><th>Priority</th><th>Status</th><th>Detail</th><th>Progress</th><th>Due date</th><th></th></tr>
+          <tr><th class="sortable" onclick="sortBy('name')">Task <span id="sort-name" class="sort-icon"></span></th><th>Machine No</th><th>Job type</th><th class="sortable" onclick="sortBy('priority')">Priority <span id="sort-priority" class="sort-icon">↑</span></th><th class="sortable" onclick="sortBy('status')">Status <span id="sort-status" class="sort-icon"></span></th><th>Detail</th><th>Progress</th><th class="sortable" onclick="sortBy('due')">Due date <span id="sort-due" class="sort-icon"></span></th><th class="sortable" onclick="sortBy('createdAt')">Created <span id="sort-createdAt" class="sort-icon"></span></th><th></th></tr>
         </thead>
         <tbody id="tbody"></tbody>
       </table>
@@ -326,6 +329,7 @@ tr.sr.wf-row td{background:#060D15;border-bottom:0.5px solid #0C1A28}
   <div class="modal" onclick="event.stopPropagation()">
     <h2 id="modal-title"><i class="ti ti-plus"></i> เพิ่ม Task ใหม่</h2>
     <div class="fr"><label>ชื่องาน *</label><input id="fn" placeholder="ชื่อ task..."></div>
+    <div class="fr"><label>Machine No</label><div class="ac-wrap"><input id="fmachine" placeholder="พิมพ์ Machine No..." autocomplete="off" oninput="acFilter(this.value)" onblur="setTimeout(acHide,200)" onfocus="acFilter(this.value)"><div class="ac-list" id="ac-list" style="display:none"></div></div></div>
     <div class="fg2">
       <div class="fr"><label>Job type</label>
         <select id="fjt" onchange="onJTChange(this.value)">
@@ -376,6 +380,11 @@ const sBadge={'To Do':'s-todo','In Progress':'s-inprogress',Review:'s-review',Do
 
 window._tasks=[];
 let expanded={},editId=null,mSteps=[],mSubs=[],mJT='Technical';
+let sortKey='auto',sortDir=1;
+const MACHINES=[];
+function acFilter(v){const list=document.getElementById('ac-list');if(!list)return;const q=v.toLowerCase();const matches=MACHINES.filter(m=>m.toLowerCase().includes(q)).slice(0,8);if(!matches.length){list.style.display='none';return}list.innerHTML=matches.map(m=>'<div class="ac-item" onmousedown="acSelect(\''+m+'\')">' +m+'</div>').join('');list.style.display='block'}
+function acSelect(v){const el=document.getElementById('fmachine');if(el)el.value=v;acHide()}
+function acHide(){const list=document.getElementById('ac-list');if(list)list.style.display='none'}
 
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function isWF(jt){return jt==='Spare Part'||jt==='Order Spare Part'}
@@ -430,13 +439,18 @@ function render(){
     if(fj&&t.jobtype!==fj)return false;
     if(fp&&t.priority!==fp)return false;
     if(fs&&t.status!==fs)return false;
-    if(ql&&!(t.name.toLowerCase().includes(ql)||(t.detail||'').toLowerCase().includes(ql)))return false;
+    if(ql&&!(t.name.toLowerCase().includes(ql)||(t.detail||'').toLowerCase().includes(ql)||(t.machine||'').toLowerCase().includes(ql)))return false;
     return true;
   });
+  const pOrd={Critical:0,High:1,Medium:2,Low:3};
+  const sOrd={'In Progress':0,'To Do':1,Review:2,Blocked:3,Done:4};
+  if(sortKey==='auto'){fil.sort((a,b)=>{const pd=(pOrd[a.priority]??9)-(pOrd[b.priority]??9);if(pd!==0)return pd;const da=a.due||'9999',db=b.due||'9999';return da<db?-1:da>db?1:0});}
+  else{fil.sort((a,b)=>{let va,vb;if(sortKey==='priority'){va=pOrd[a.priority]??9;vb=pOrd[b.priority]??9}else if(sortKey==='status'){va=sOrd[a.status]??9;vb=sOrd[b.status]??9}else if(sortKey==='due'){va=a.due||'9999';vb=b.due||'9999'}else if(sortKey==='createdAt'){va=a.createdAt||0;vb=b.createdAt||0}else{va=(a[sortKey]||'').toLowerCase();vb=(b[sortKey]||'').toLowerCase()}return va<vb?-sortDir:va>vb?sortDir:0});}
+  ['name','priority','status','due','createdAt'].forEach(k=>{const el=document.getElementById('sort-'+k);if(el)el.textContent=sortKey===k?(sortDir===1?'\u2191':'\u2193'):(sortKey==='auto'&&k==='priority'?'\u2191':'')})
   const tbody=document.getElementById('tbody');
   if(!tbody)return;
   if(!fil.length){
-    tbody.innerHTML='<tr><td colspan="8" class="empty"><i class="ti ti-inbox"></i><p>ยังไม่มี task</p></td></tr>';
+    tbody.innerHTML='<tr><td colspan="10" class="empty"><i class="ti ti-inbox"></i><p>ยังไม่มี task</p></td></tr>';
   }else{
     let h='';
     fil.forEach(t=>{
@@ -448,6 +462,7 @@ function render(){
           ${items.length?`<button class="xbtn${isOpen?' open':''}" onclick="toggleExp('${t.id}')"><i class="ti ti-chevron-right"></i></button>`:'<span style="display:inline-block;width:22px"></span>'}
           ${esc(t.name)}
         </td>
+        <td style="font-size:11px;color:var(--tmu)">${esc(t.machine)||'—'}</td>
         <td><span class="badge ${jBadge[t.jobtype]||'j-other'}">${esc(t.jobtype)}</span></td>
         <td><span class="badge ${pBadge[t.priority]||'p-medium'}">${t.priority||'—'}</span></td>
         <td>
@@ -458,6 +473,7 @@ function render(){
         <td style="font-size:11px;color:var(--tmu)">${esc(t.detail)||'—'}</td>
         <td>${progHTML(t)}</td>
         <td style="font-size:10px;color:var(--tmu);font-family:'IBM Plex Mono',monospace">${t.due||'—'}</td>
+        <td style="font-size:10px;color:var(--td);font-family:'IBM Plex Mono',monospace">${t.createdAt?new Date(t.createdAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}):'—'}</td>
         <td style="white-space:nowrap">
           <button class="ico" onclick="openModal('${t.id}')"><i class="ti ti-edit"></i></button>
           <button class="ico del" onclick="delTask('${t.id}')"><i class="ti ti-trash"></i></button>
@@ -519,6 +535,7 @@ function renderSum(){
 }
 
 function toggleExp(id){expanded[id]=!expanded[id];render()}
+function sortBy(key){if(sortKey===key){sortDir*=-1}else{sortKey=key;sortDir=1}render()}
 
 /* ── MODAL ── */
 function renderStepSection(){
@@ -592,6 +609,7 @@ function openModal(id){
   document.getElementById('fs').value=t?t.status:'To Do';
   document.getElementById('fd').value=t?t.due:'';
   document.getElementById('fdt').value=t?t.detail:'';
+  const _fm=document.getElementById('fmachine');if(_fm)_fm.value=t&&t.machine?t.machine:'';
   renderStepSection();
   document.getElementById('modalBg').style.display='flex';
   setTimeout(()=>{const el=document.getElementById('fn');if(el){el.focus();el.setSelectionRange(999,999)}},60);
@@ -606,12 +624,14 @@ async function saveTask(){
   const wf=isWF(mJT);
   const obj={
     id:editId||uid(),name,jobtype:mJT,
+    machine:(document.getElementById('fmachine').value||'').trim(),
     priority:document.getElementById('fp').value,
     status:document.getElementById('fs').value,
     detail:(document.getElementById('fdt').value||'').trim(),
     due:document.getElementById('fd').value,
     steps:wf?JSON.parse(JSON.stringify(mSteps)):[],
-    subs:!wf?JSON.parse(JSON.stringify(mSubs)):[]
+    subs:!wf?JSON.parse(JSON.stringify(mSubs)):[],
+    createdAt:(editId&&window._tasks.find(x=>x.id===editId))?window._tasks.find(x=>x.id===editId).createdAt:Date.now()
   };
   closeModal();
   await window.saveTaskToDb(obj);
