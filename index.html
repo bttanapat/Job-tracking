@@ -307,6 +307,7 @@ tr.sr.wf-row td{background:#060D15;border-bottom:0.5px solid #0C1A28}
         <option value="">Status ทั้งหมด</option>
         <option>To Do</option><option>In Progress</option><option>Review</option><option>Done</option><option>Blocked</option>
       </select>
+      <button class="btn" onclick="resetSort()" title="Reset การเรียง"><i class="ti ti-arrows-sort"></i> Auto sort</button>
       <button class="btn primary" onclick="openModal()"><i class="ti ti-plus"></i> เพิ่ม Task</button>
     </div>
 
@@ -316,7 +317,18 @@ tr.sr.wf-row td{background:#060D15;border-bottom:0.5px solid #0C1A28}
           <col style="width:15%"><col style="width:8%"><col style="width:10%"><col style="width:8%"><col style="width:9%"><col style="width:13%"><col style="width:11%"><col style="width:8%"><col style="width:8%"><col style="width:3%">
         </colgroup>
         <thead>
-          <tr><th class="sortable" onclick="sortBy('name')">Task <span id="sort-name" class="sort-icon"></span></th><th>Machine No</th><th>Job type</th><th class="sortable" onclick="sortBy('priority')">Priority <span id="sort-priority" class="sort-icon">↑</span></th><th class="sortable" onclick="sortBy('status')">Status <span id="sort-status" class="sort-icon"></span></th><th>Detail</th><th>Progress</th><th class="sortable" onclick="sortBy('due')">Due date <span id="sort-due" class="sort-icon"></span></th><th class="sortable" onclick="sortBy('createdAt')">Created <span id="sort-createdAt" class="sort-icon"></span></th><th></th></tr>
+          <tr>
+            <th class="sortable" onclick="sortBy('name')">Task <span id="sort-name" class="sort-icon"></span></th>
+            <th class="sortable" onclick="sortBy('machine')">Machine No <span id="sort-machine" class="sort-icon"></span></th>
+            <th class="sortable" onclick="sortBy('jobtype')">Job type <span id="sort-jobtype" class="sort-icon"></span></th>
+            <th class="sortable" onclick="sortBy('priority')">Priority <span id="sort-priority" class="sort-icon">↑</span></th>
+            <th class="sortable" onclick="sortBy('status')">Status <span id="sort-status" class="sort-icon"></span></th>
+            <th>Detail</th>
+            <th>Progress</th>
+            <th class="sortable" onclick="sortBy('due')">Due date <span id="sort-due" class="sort-icon"></span></th>
+            <th class="sortable" onclick="sortBy('createdAt')">Created <span id="sort-createdAt" class="sort-icon"></span></th>
+            <th></th>
+          </tr>
         </thead>
         <tbody id="tbody"></tbody>
       </table>
@@ -446,7 +458,7 @@ function render(){
   const sOrd={'In Progress':0,'To Do':1,Review:2,Blocked:3,Done:4};
   if(sortKey==='auto'){fil.sort((a,b)=>{const pd=(pOrd[a.priority]??9)-(pOrd[b.priority]??9);if(pd!==0)return pd;const da=a.due||'9999',db=b.due||'9999';return da<db?-1:da>db?1:0});}
   else{fil.sort((a,b)=>{let va,vb;if(sortKey==='priority'){va=pOrd[a.priority]??9;vb=pOrd[b.priority]??9}else if(sortKey==='status'){va=sOrd[a.status]??9;vb=sOrd[b.status]??9}else if(sortKey==='due'){va=a.due||'9999';vb=b.due||'9999'}else if(sortKey==='createdAt'){va=a.createdAt||0;vb=b.createdAt||0}else{va=(a[sortKey]||'').toLowerCase();vb=(b[sortKey]||'').toLowerCase()}return va<vb?-sortDir:va>vb?sortDir:0});}
-  ['name','priority','status','due','createdAt'].forEach(k=>{const el=document.getElementById('sort-'+k);if(el)el.textContent=sortKey===k?(sortDir===1?'\u2191':'\u2193'):(sortKey==='auto'&&k==='priority'?'\u2191':'')})
+  ['name','machine','jobtype','priority','status','due','createdAt'].forEach(k=>{const el=document.getElementById('sort-'+k);if(el)el.textContent=sortKey===k?(sortDir===1?'\u2191':'\u2193'):(sortKey==='auto'&&k==='priority'?'\u2191':'')})
   const tbody=document.getElementById('tbody');
   if(!tbody)return;
   if(!fil.length){
@@ -536,6 +548,7 @@ function renderSum(){
 
 function toggleExp(id){expanded[id]=!expanded[id];render()}
 function sortBy(key){if(sortKey===key){sortDir*=-1}else{sortKey=key;sortDir=1}render()}
+function resetSort(){sortKey='auto';sortDir=1;render();showToast('↑ Auto sort: Critical + Due date')}
 
 /* ── MODAL ── */
 function renderStepSection(){
